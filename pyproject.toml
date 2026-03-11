@@ -1,0 +1,31 @@
+[project]
+name = "marketing-agent"
+version = "0.1.0"
+description = "Autonomous Marketing Agent with psychological triggers — scans trends, aligns with brand strategy, generates on-brand content angles."
+requires-python = ">=3.13,<3.14"
+readme = "README.md"
+dependencies = [
+    "google-generativeai>=0.8.0",
+    "anthropic>=0.80.0",
+    "openai>=1.50.0",
+    "tavily-python>=0.5.0",
+    "pytrends>=4.9.0",
+    "chromadb>=1.5.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "typer[all]>=0.15.0",
+    "pypdf2>=3.0.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "apscheduler>=3.10.0",
+    "httpx>=0.28.0",
+    "python-multipart>=0.0.18",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+marketing-agent = "src.cli:app"
+
+[tool.uv]
+managed = true

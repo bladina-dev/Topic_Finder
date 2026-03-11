@@ -1,0 +1,13 @@
+# Marketing Agent
+
+.venv/
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+dist/
+build/
+node_modules/
+frontend/dist/
+.chromadb/
+brand_data/

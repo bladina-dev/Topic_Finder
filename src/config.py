@@ -1,0 +1,62 @@
+"""Configuration for the Marketing Agent."""
+
+import os
+from pathlib import Path
+
+from pydantic_settings import BaseSettings
+
+
+def _find_env_file() -> str | None:
+    """Find a readable .env file, handling macOS permission issues."""
+    candidates = [
+        Path("/tmp/.marketing-agent.env"),
+        Path(".env"),
+        Path(os.path.expanduser("~/.marketing-agent.env")),
+    ]
+    for p in candidates:
+        try:
+            if p.is_file():
+                return str(p)
+        except PermissionError:
+            continue
+    return None
+
+
+_env_file = _find_env_file()
+
+
+class Settings(BaseSettings):
+    """Application settings loaded from environment or .env file."""
+
+    # AI Providers
+    google_api_key: str = ""
+    anthropic_api_key: str = ""
+    lm_studio_base_url: str = "http://localhost:1234/v1"
+    lm_studio_model: str = "default"
+
+    # Search APIs
+    tavily_api_key: str = ""
+
+    # Agent
+    agent_timezone: str = "Africa/Cairo"
+    agent_schedule_hour: int = 18
+    agent_schedule_minute: int = 0
+
+    # Storage
+    chromadb_path: str = "/tmp/marketing-agent-data/chromadb"
+    brand_docs_path: str = "/tmp/marketing-agent-data/docs"
+
+    # AI Provider Selection: "gemini", "claude", "lmstudio"
+    default_ai_provider: str = "gemini"
+
+    # Server
+    api_host: str = "0.0.0.0"
+    api_port: int = 8000
+
+    model_config = {
+        "env_file": _env_file or "",
+        "env_file_encoding": "utf-8",
+    }
+
+
+settings = Settings()

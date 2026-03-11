@@ -1,0 +1,148 @@
+"""CLI for the Marketing Agent — powered by Typer."""
+
+from __future__ import annotations
+
+import asyncio
+from pathlib import Path
+
+import typer
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+app = typer.Typer(
+    name="marketing-agent",
+    help="🚀 Autonomous Marketing Agent with Psychological Triggers",
+    rich_markup_mode="rich",
+)
+console = Console()
+
+
+@app.command()
+def scan(
+    mock: bool = typer.Option(False, "--mock", "-m", help="Use mock trend data"),
+    max_results: int = typer.Option(8, "--max", "-n", help="Max trends to return"),
+):
+    """Scan current trending topics from KSA/Gulf sources."""
+    from .trend_scanner import scan_trends
+
+    console.print("\n[bold cyan]🔍 Scanning Trends...[/bold cyan]\n")
+
+    trends = asyncio.run(scan_trends(mock=mock, max_results=max_results))
+
+    if not trends:
+        console.print("[yellow]No trends found.[/yellow]")
+        return
+
+    table = Table(title="📊 Trending Topics", show_lines=True)
+    table.add_column("#", style="dim", width=3)
+    table.add_column("Title", style="bold white", min_width=30)
+    table.add_column("Source", style="cyan", width=15)
+    table.add_column("Jack ⚡", justify="center", width=8)
+
+    for i, trend in enumerate(trends, 1):
+        score = f"{'🟢' if trend.jack_potential >= 0.8 else '🟡' if trend.jack_potential >= 0.6 else '🔴'} {trend.jack_potential:.0%}"
+        table.add_row(str(i), trend.title, trend.source.value, score)
+
+    console.print(table)
+    console.print(f"\n[dim]Found {len(trends)} trends[/dim]\n")
+
+
+@app.command()
+def generate(
+    mock: bool = typer.Option(False, "--mock", "-m", help="Use mock data for trends and angles"),
+    max_trends: int = typer.Option(8, "--max-trends", "-t", help="Max trends"),
+    angles: int = typer.Option(3, "--angles", "-a", help="Angles per trend"),
+    provider: str = typer.Option("", "--provider", "-p", help="AI provider: gemini, claude, lmstudio"),
+):
+    """Run the full pipeline — scan trends → generate content angles."""
+    from .models import AIProvider
+    from .pipeline import run_pipeline
+
+    console.print("\n[bold cyan]🚀 Running Marketing Agent Pipeline...[/bold cyan]\n")
+
+    ai_provider = None
+    if provider:
+        try:
+            ai_provider = AIProvider(provider)
+        except ValueError:
+            console.print(f"[red]Unknown provider: {provider}. Use: gemini, claude, lmstudio[/red]")
+            raise typer.Exit(1)
+
+    output = asyncio.run(run_pipeline(
+        mock=mock,
+        max_trends=max_trends,
+        angles_per_trend=angles,
+        provider=ai_provider,
+    ))
+
+    if output.errors:
+        for err in output.errors:
+            console.print(f"[red]⚠ {err}[/red]")
+
+    for result in output.results:
+        trend = result.trend
+        source_emoji = {"twitter_ksa": "🐦", "google_trends": "📈", "gulf_news": "📰", "cultural": "🎭"}.get(trend.source.value, "📌")
+
+        console.print(Panel(
+            f"[bold]{trend.title}[/bold]\n"
+            f"[dim]{trend.description[:100]}[/dim]",
+            title=f"{source_emoji} {trend.source.value.upper()} | Jack: {trend.jack_potential:.0%}",
+            border_style="cyan",
+        ))
+
+        for j, angle in enumerate(result.angles, 1):
+            triggers_str = ", ".join(
+                f"[magenta]{t.type.value}[/magenta]" for t in angle.psych_triggers
+            ) or "[dim]none[/dim]"
+
+            console.print(f"  [bold green]Angle {j}:[/bold green] {angle.headline}")
+            console.print(f"  [yellow]Hook:[/yellow] {angle.hook}")
+            console.print(f"  [dim]Platform:[/dim] {angle.platform.value} | [dim]Triggers:[/dim] {triggers_str} | [dim]Brand fit:[/dim] {angle.brand_alignment_score:.0%}")
+            console.print()
+
+    console.print(f"[bold green]✅ Done:[/bold green] {output.trend_count} trends, {output.angle_count} angles\n")
+
+
+@app.command()
+def upload(
+    file: Path = typer.Argument(..., help="Path to brand PDF file"),
+    brand_name: str = typer.Option("", "--name", "-n", help="Brand name"),
+):
+    """Upload a brand strategy/marketing plan PDF."""
+    from .brand_ingestion import ingest_brand_pdf
+
+    if not file.exists():
+        console.print(f"[red]File not found: {file}[/red]")
+        raise typer.Exit(1)
+
+    if not str(file).lower().endswith(".pdf"):
+        console.print("[red]Only PDF files are supported.[/red]")
+        raise typer.Exit(1)
+
+    console.print(f"\n[cyan]📄 Ingesting: {file.name}...[/cyan]")
+
+    result = ingest_brand_pdf(file, brand_name=brand_name)
+
+    console.print(f"[green]✅ Ingested successfully![/green]")
+    console.print(f"   Pages processed: {result['pages_processed']}")
+    console.print(f"   Chunks stored: {result['chunks_stored']}\n")
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("0.0.0.0", "--host", "-h", help="API host"),
+    port: int = typer.Option(8000, "--port", "-p", help="API port"),
+):
+    """Start the FastAPI server."""
+    import uvicorn
+
+    console.print(f"\n[bold cyan]🌐 Starting Marketing Agent API...[/bold cyan]")
+    console.print(f"[dim]→ http://{host}:{port}[/dim]")
+    console.print(f"[dim]→ Docs: http://{host}:{port}/docs[/dim]\n")
+
+    uvicorn.run("src.api:app", host=host, port=port, reload=True)
+
+
+if __name__ == "__main__":
+    app()
