@@ -61,6 +61,6 @@ The benchmark evaluates angles across 6 dimensions and generates a comprehensive
 - `run_benchmark.py`: Entrypoint for QA testing and iterating on prompt improvements.
 
 ## Roadmap (V2 Features)
-- **Automated Scheduling:** Implement a daily trigger (e.g., 6:00 AM/PM) via GitHub Actions or a local Cron job so the agent runs autonomously without manual terminal commands.
+- **Automated Scheduling:** Implement a twice-daily trigger (6:00 AM and 6:00 PM) via GitHub Actions or a local cron job so the agent runs autonomously and monitors trends during peak Gulf engagement hours.
 - **Direct Delivery Pipeline:** Automatically push the generated, 50+ score angles directly to the marketing team via WhatsApp, Telegram, or Email for immediate review and posting.
 - **Predictive Scoring & Dark Social Integration:** (See V2 Features documentation for full list of upcoming upgrades).
