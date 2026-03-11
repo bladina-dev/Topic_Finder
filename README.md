@@ -59,3 +59,8 @@ The benchmark evaluates angles across 6 dimensions and generates a comprehensive
 - `src/ai_orchestrator.py`: Prompt construction, AI provider routing, and cultural parameter injection.
 - `src/trend_scanner.py`: Searches the web via Tavily to harvest current hashtags and topics.
 - `run_benchmark.py`: Entrypoint for QA testing and iterating on prompt improvements.
+
+## Roadmap (V2 Features)
+- **Automated Scheduling:** Implement a daily trigger (e.g., 6:00 AM/PM) via GitHub Actions or a local Cron job so the agent runs autonomously without manual terminal commands.
+- **Direct Delivery Pipeline:** Automatically push the generated, 50+ score angles directly to the marketing team via WhatsApp, Telegram, or Email for immediate review and posting.
+- **Predictive Scoring & Dark Social Integration:** (See V2 Features documentation for full list of upcoming upgrades).
