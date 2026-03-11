@@ -63,4 +63,5 @@ The benchmark evaluates angles across 6 dimensions and generates a comprehensive
 ## Roadmap (V2 Features)
 - **Automated Scheduling:** Implement a twice-daily trigger (6:00 AM and 6:00 PM) via GitHub Actions or a local cron job so the agent runs autonomously and monitors trends during peak Gulf engagement hours.
 - **Direct Delivery Pipeline:** Automatically push the generated, 50+ score angles directly to the marketing team via WhatsApp, Telegram, or Email for immediate review and posting.
+- **Targeted Data Sources:** Expand trend scanning beyond general news by directly tracking specific industry websites and local influencers for hyper-current, niche ideas and data points.
 - **Predictive Scoring & Dark Social Integration:** (See V2 Features documentation for full list of upcoming upgrades).
