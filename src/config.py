@@ -53,6 +53,22 @@ class Settings(BaseSettings):
     api_host: str = "0.0.0.0"
     api_port: int = 8000
 
+    # Telegram
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+
+    # Reports
+    reports_path: str = "./reports"
+
+    # Sources
+    default_sources: str = "saudi_general"
+
+    # YouTube
+    youtube_scan_enabled: bool = True
+    youtube_max_per_channel: int = 2
+    youtube_sources: str = "youtube_channels"
+    youtube_data_api_key: str = ""  # Falls back to google_api_key if empty
+
     model_config = {
         "env_file": _env_file or "",
         "env_file_encoding": "utf-8",

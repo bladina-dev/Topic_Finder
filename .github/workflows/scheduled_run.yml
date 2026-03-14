@@ -1,0 +1,46 @@
+name: Scheduled Marketing Agent Run
+
+on:
+  schedule:
+    # 6:00 AM Cairo/Riyadh (UTC+3) = 03:00 UTC
+    - cron: '0 3 * * *'
+    # 6:00 PM Cairo/Riyadh (UTC+3) = 15:00 UTC
+    - cron: '0 15 * * *'
+  workflow_dispatch:  # Manual trigger from GitHub UI
+
+env:
+  GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+  TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run pipeline + send report
+        run: uv run python scripts/run_and_report.py
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports-${{ github.run_number }}
+          path: reports/
+          retention-days: 30

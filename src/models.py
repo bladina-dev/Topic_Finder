@@ -27,6 +27,8 @@ class TrendSource(str, Enum):
     GOOGLE_TRENDS = "google_trends"
     GULF_NEWS = "gulf_news"
     CULTURAL = "cultural"
+    TARGETED = "targeted"
+    YOUTUBE = "youtube"
 
 
 class AIProvider(str, Enum):
@@ -60,6 +62,15 @@ class BrandProfile(BaseModel):
     doc_ids: list[str] = Field(default_factory=list)
 
 
+class SourceEntry(BaseModel):
+    """A single source entry from a CSV file."""
+    vertical: str = ""
+    type: str = ""  # twitter, domain, instagram, etc.
+    handle_or_domain: str
+    label: str = ""
+    youtube_handle: str = ""
+
+
 class Trend(BaseModel):
     """A trending topic discovered by the scanner."""
     title: str
@@ -67,7 +78,10 @@ class Trend(BaseModel):
     source: TrendSource
     jack_potential: float = Field(default=0.0, ge=0.0, le=1.0)
     url: str = ""
+    published_at: Optional[datetime] = None  # When the original content was published
+    source_name: str = ""                    # Human-readable origin (channel, domain, etc.)
     region: str = "KSA"
+    vertical: str = ""
     discovered_at: datetime = Field(default_factory=datetime.now)
     raw_data: dict = Field(default_factory=dict)
 

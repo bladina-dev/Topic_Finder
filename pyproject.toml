@@ -1,6 +1,6 @@
 [project]
 name = "marketing-agent"
-version = "0.1.0"
+version = "0.2.0"
 description = "Autonomous Marketing Agent with psychological triggers — scans trends, aligns with brand strategy, generates on-brand content angles."
 requires-python = ">=3.13,<3.14"
 readme = "README.md"
@@ -22,6 +22,11 @@ dependencies = [
     "python-multipart>=0.0.18",
     "python-dotenv>=1.0.0",
     "rich>=13.0.0",
+    "python-telegram-bot>=21.0",
+    "tenacity>=8.0",
+    "youtube-transcript-api>=0.6.0",
+    "yt-dlp>=2024.0",
+    "google-api-python-client>=2.0",
 ]
 
 [project.scripts]
