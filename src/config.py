@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     model_config = {
         "env_file": _env_file or "",
         "env_file_encoding": "utf-8",
+        "extra": "ignore",
     }
 
 

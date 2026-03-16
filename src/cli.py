@@ -124,9 +124,89 @@ def upload(
 
     result = ingest_brand_pdf(file, brand_name=brand_name)
 
-    console.print(f"[green]✅ Ingested successfully![/green]")
+    console.print("[green]✅ Ingested successfully![/green]")
     console.print(f"   Pages processed: {result['pages_processed']}")
     console.print(f"   Chunks stored: {result['chunks_stored']}\n")
+
+
+@app.command()
+def video(
+    mock: bool = typer.Option(False, "--mock", "-m", help="Use mock data"),
+    max_trends: int = typer.Option(4, "--max-trends", "-t", help="Max trends"),
+    angles: int = typer.Option(3, "--angles", "-a", help="Angles per trend"),
+    pick: int = typer.Option(0, "--pick", "-k", help="Which angle to convert (0=best by brand_alignment_score)"),
+    output_dir: Path = typer.Option(Path("output/videos"), "--output", "-o", help="Output directory"),
+    provider: str = typer.Option("", "--provider", "-p", help="AI provider: gemini, claude, lmstudio"),
+):
+    """Full pipeline: scan trends → generate angles → convert best angle to video JSON."""
+    import json
+
+    from .models import AIProvider
+    from .pipeline import run_pipeline
+    from .video_converter import angle_to_video_data
+
+    console.print("\n[bold cyan]🔍 Scanning Trends...[/bold cyan]\n")
+
+    ai_provider = None
+    if provider:
+        try:
+            ai_provider = AIProvider(provider)
+        except ValueError:
+            console.print(f"[red]Unknown provider: {provider}. Use: gemini, claude, lmstudio[/red]")
+            raise typer.Exit(1)
+
+    output = asyncio.run(run_pipeline(
+        mock=mock,
+        max_trends=max_trends,
+        angles_per_trend=angles,
+        provider=ai_provider,
+    ))
+
+    if output.errors:
+        for err in output.errors:
+            console.print(f"[red]⚠ {err}[/red]")
+
+    # Collect all angles from all trends
+    all_angles = []
+    for result in output.results:
+        for angle in result.angles:
+            all_angles.append((angle, result.trend))
+
+    if not all_angles:
+        console.print("[yellow]No angles generated — nothing to convert.[/yellow]")
+        raise typer.Exit(1)
+
+    # Pick the angle: --pick index, or best by brand_alignment_score
+    if pick > 0:
+        idx = min(pick - 1, len(all_angles) - 1)
+        chosen_angle, chosen_trend = all_angles[idx]
+        console.print(f"[dim]Using angle #{pick} (of {len(all_angles)} total)[/dim]")
+    else:
+        chosen_angle, chosen_trend = max(all_angles, key=lambda x: x[0].brand_alignment_score)
+        console.print(f"[dim]Best angle: {chosen_angle.headline[:60]} (score: {chosen_angle.brand_alignment_score:.0%})[/dim]")
+
+    console.print("\n[bold cyan]🎬 Converting best angle to video script...[/bold cyan]\n")
+
+    try:
+        video_data = asyncio.run(angle_to_video_data(chosen_angle, chosen_trend, ai_provider, mock=mock))
+    except Exception as e:
+        console.print(f"[red]Video conversion failed: {e}[/red]")
+        raise typer.Exit(1)
+
+    # Save output
+    output_dir.mkdir(parents=True, exist_ok=True)
+    video_id = video_data.get("id", "fahad-video")
+    output_path = output_dir / f"{video_id}.json"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(video_data, f, ensure_ascii=False, indent=2)
+
+    console.print(f"[bold green]✅ Video script saved:[/bold green] {output_path}\n")
+
+    remotion_dir = '~/Downloads/SamCV\\ /video'
+    console.print("[bold]To render:[/bold]")
+    console.print(f'  cd "{remotion_dir}"')
+    console.print(f'  npx remotion render FahadYouTubeShort --props="$(pwd)/{output_path}" out/{video_id}.mp4\n')
 
 
 @app.command()
@@ -137,7 +217,7 @@ def serve(
     """Start the FastAPI server."""
     import uvicorn
 
-    console.print(f"\n[bold cyan]🌐 Starting Marketing Agent API...[/bold cyan]")
+    console.print("\n[bold cyan]🌐 Starting Marketing Agent API...[/bold cyan]")
     console.print(f"[dim]→ http://{host}:{port}[/dim]")
     console.print(f"[dim]→ Docs: http://{host}:{port}/docs[/dim]\n")
 
