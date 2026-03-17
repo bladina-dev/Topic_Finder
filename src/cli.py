@@ -140,6 +140,9 @@ def video(
     voiceover: bool = typer.Option(False, "--voiceover", help="Generate ElevenLabs Arabic voiceover MP3"),
     mock_voiceover: bool = typer.Option(False, "--mock-voiceover", help="Generate placeholder voiceover TXT (no API key needed)"),
     voice_id: str = typer.Option("pNInz6obpgDQGcFmaJgB", "--voice-id", help="ElevenLabs voice ID"),
+    bg_music: bool = typer.Option(False, "--bg-music", help="Generate AI background music via MiniMax"),
+    mock_music: bool = typer.Option(False, "--mock-music", help="Use placeholder music (no API key needed)"),
+    assemble: bool = typer.Option(False, "--assemble", help="Print FFmpeg assemble command after generating all assets"),
 ):
     """Full pipeline: scan trends → generate angles → convert best angle to video JSON."""
     import json
@@ -207,6 +210,7 @@ def video(
     console.print(f"[bold green]✅ Video script saved:[/bold green] {output_path}\n")
 
     # Optional voiceover generation
+    voiceover_path: str | None = None
     if voiceover or mock_voiceover:
         import os as _os
 
@@ -216,7 +220,7 @@ def video(
             console.print("[yellow]⚠️ ELEVENLABS_API_KEY not set — skipping voiceover[/yellow]")
         else:
             try:
-                asyncio.run(
+                vo_result = asyncio.run(
                     generate_voiceover(
                         video_data,
                         voice_id=voice_id,
@@ -224,8 +228,42 @@ def video(
                         mock=mock_voiceover,
                     )
                 )
+                voiceover_path = str(vo_result)
             except Exception as e:
                 console.print(f"[red]Voiceover generation failed: {e}[/red]")
+
+    # Optional background music generation
+    music_path: str | None = None
+    if bg_music or mock_music:
+        from .music_generator import _generate_music_prompt, generate_bg_music
+
+        music_prompt = _generate_music_prompt(video_data)
+        music_output = str(Path("output/music") / f"{video_id}_bg.mp3")
+        try:
+            music_path = asyncio.run(
+                generate_bg_music(music_prompt, music_output, mock=mock_music)
+            )
+        except Exception as e:
+            console.print(f"[red]Music generation failed: {e}[/red]")
+
+    # Pipeline summary
+    if assemble or bg_music or mock_music:
+        vo_display = voiceover_path or "—"
+        mu_display = music_path or "—"
+        console.print("\n[bold]📋 Pipeline Summary:[/bold]")
+        console.print(f"   📄 VideoData:  {output_path}")
+        console.print(f"   🎤 Voiceover:  {vo_display}")
+        console.print(f"   🎵 Music:      {mu_display}")
+        if assemble:
+            rendered_mp4 = f"out/{video_id}.mp4"
+            final_mp4 = f"output/final/{video_id}.mp4"
+            console.print(
+                f"   🎬 To assemble: python -m src.cli assemble"
+                f" --video {rendered_mp4}"
+                f" --voiceover {vo_display}"
+                f" --music {mu_display}"
+                f" --output {final_mp4}"
+            )
 
     remotion_dir = '~/Downloads/SamCV\\ /video'
     console.print("[bold]To render:[/bold]")
