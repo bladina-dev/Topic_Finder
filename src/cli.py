@@ -137,6 +137,9 @@ def video(
     pick: int = typer.Option(0, "--pick", "-k", help="Which angle to convert (0=best by brand_alignment_score)"),
     output_dir: Path = typer.Option(Path("output/videos"), "--output", "-o", help="Output directory"),
     provider: str = typer.Option("", "--provider", "-p", help="AI provider: gemini, claude, lmstudio"),
+    voiceover: bool = typer.Option(False, "--voiceover", help="Generate ElevenLabs Arabic voiceover MP3"),
+    mock_voiceover: bool = typer.Option(False, "--mock-voiceover", help="Generate placeholder voiceover TXT (no API key needed)"),
+    voice_id: str = typer.Option("pNInz6obpgDQGcFmaJgB", "--voice-id", help="ElevenLabs voice ID"),
 ):
     """Full pipeline: scan trends → generate angles → convert best angle to video JSON."""
     import json
@@ -202,6 +205,27 @@ def video(
         json.dump(video_data, f, ensure_ascii=False, indent=2)
 
     console.print(f"[bold green]✅ Video script saved:[/bold green] {output_path}\n")
+
+    # Optional voiceover generation
+    if voiceover or mock_voiceover:
+        import os as _os
+
+        from .voiceover import generate_voiceover
+
+        if voiceover and not mock_voiceover and not _os.environ.get("ELEVENLABS_API_KEY"):
+            console.print("[yellow]⚠️ ELEVENLABS_API_KEY not set — skipping voiceover[/yellow]")
+        else:
+            try:
+                asyncio.run(
+                    generate_voiceover(
+                        video_data,
+                        voice_id=voice_id,
+                        output_dir=Path("output/voiceovers"),
+                        mock=mock_voiceover,
+                    )
+                )
+            except Exception as e:
+                console.print(f"[red]Voiceover generation failed: {e}[/red]")
 
     remotion_dir = '~/Downloads/SamCV\\ /video'
     console.print("[bold]To render:[/bold]")
