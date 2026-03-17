@@ -21,3 +21,8 @@ output/voiceovers/*
 !output/voiceovers/.gitkeep
 output/music/*
 !output/music/.gitkeep
+output/final/*
+!output/final/.gitkeep
+
+# OS files
+.DS_Store

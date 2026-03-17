@@ -15,6 +15,12 @@ app = typer.Typer(
     help="🚀 Autonomous Marketing Agent with Psychological Triggers",
     rich_markup_mode="rich",
 )
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 console = Console()
 
 
