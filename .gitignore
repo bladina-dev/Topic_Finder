@@ -14,3 +14,10 @@ frontend/dist/
 brand_data/
 reports/
 
+# Generated output artifacts (keep .gitkeep, ignore content)
+output/videos/*
+!output/videos/.gitkeep
+output/voiceovers/*
+!output/voiceovers/.gitkeep
+output/music/*
+!output/music/.gitkeep
