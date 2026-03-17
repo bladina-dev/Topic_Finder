@@ -2,6 +2,25 @@
 
 All notable changes to the Marketing Agent project.
 
+## [0.4.0] — 2026-03-17
+
+### Fixed
+- **`src/ai_orchestrator.py`** — Migrated from deprecated `google.generativeai` to `google.genai` SDK
+  - Replaced `genai.configure()` + `GenerativeModel` with `genai.Client` + `client.models.generate_content()`
+  - Fixed Claude model ID: `claude-sonnet-4-20250514` → `claude-sonnet-4-6`
+  - Improved JSON parse error handling: strips ` ```json ` language tags, logs raw response on failure
+- **`src/trend_scanner.py`** — Google Trends gated behind `google_trends_enabled` flag (defaults `False`) — eliminates 404 retry spam
+- **`pyproject.toml`** — Version bumped to `0.3.0`, replaced `google-generativeai` dep with `google-genai>=1.0.0`
+
+### Changed
+- **`src/ai_orchestrator.py`** — Expanded banned cliché patterns in `ANGLE_GENERATION_PROMPT` (+14 EN + AR patterns observed in live runs)
+- **`src/benchmark.py`** — Expanded `CLICHE_PATTERNS_EN` (+8) and `CLICHE_PATTERNS_AR` (+7) with patterns confirmed in live output
+- **`src/config.py`** — Added `google_trends_enabled: bool = False`
+
+### Added
+- **`AGENT.md`** — Claude Code context file for this repo
+- **`docs/v0.4.0-plan.md`** — This version's implementation plan
+
 ## [0.3.0] — 2026-03-14
 
 ### Added — YouTube Scanner (3 free tools)

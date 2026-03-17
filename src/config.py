@@ -63,6 +63,9 @@ class Settings(BaseSettings):
     # Sources
     default_sources: str = "saudi_general"
 
+    # Google Trends (disabled — pytrends returns 404 on SA endpoint as of March 2026)
+    google_trends_enabled: bool = False
+
     # YouTube
     youtube_scan_enabled: bool = True
     youtube_max_per_channel: int = 2

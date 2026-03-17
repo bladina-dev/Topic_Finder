@@ -7,8 +7,6 @@ from datetime import datetime
 
 import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 from .config import settings
 from .models import Trend, TrendSource
@@ -83,42 +81,46 @@ def extract_marketing_insights(transcript: str, video_url: str) -> dict | None:
         return None
         
     try:
-        genai.configure(api_key=settings.google_api_key)
-        # Using Flash as it's fast and cheap for large transcript analysis
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        
-        prompt = f"""
-        You are a marketing analyst. Here is a transcript from a recent YouTube video from Saudi/Gulf region.
-        Link: {video_url}
-        Transcript (may be auto-generated with no punctuation):
-        {transcript[:15000]}  # limit tokens just in case
-        
-        Extract the core meaning of this video to figure out if it's a "trending topic" or useful marketing insight.
-        Return ONLY a JSON object with this exact schema:
-        {{
-            "is_trend": true/false,
-            "title": "A short 5-6 word title summarizing the core topic",
-            "description": "2-3 sentences explaining what this is about and why people are watching it",
-            "jack_potential": 0.0 to 1.0 float showing how viral or useful this is for marketing (e.g. 0.85)
-        }}
-        """
-        
-        # Disable safety filters for general business analysis
-        safety = {
-            HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-            HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-        }
-        
-        response = model.generate_content(prompt, safety_settings=safety)
-        
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=settings.google_api_key)
+
+        prompt = f"""You are a marketing analyst. Here is a transcript from a recent YouTube video from Saudi/Gulf region.
+Link: {video_url}
+Transcript (may be auto-generated with no punctuation):
+{transcript[:15000]}
+
+Extract the core meaning of this video to figure out if it's a "trending topic" or useful marketing insight.
+Return ONLY a JSON object with this exact schema:
+{{
+    "is_trend": true/false,
+    "title": "A short 5-6 word title summarizing the core topic",
+    "description": "2-3 sentences explaining what this is about and why people are watching it",
+    "jack_potential": 0.0 to 1.0 float showing how viral or useful this is for marketing (e.g. 0.85)
+}}"""
+
+        response = client.models.generate_content(
+            model="gemini-1.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                safety_settings=[
+                    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="OFF"),
+                    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="OFF"),
+                ],
+            ),
+        )
+
         text = response.text.strip()
-        if "```json" in text:
-            text = text.split("```json")[-1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[-1].split("```")[0].strip()
-            
+        if text.startswith("```"):
+            lines = text.split("\n")
+            text = "\n".join(lines[1:])
+            if text.rstrip().endswith("```"):
+                text = text.rstrip()[:-3]
+            text = text.strip()
+
         data = json.loads(text)
         return data
 

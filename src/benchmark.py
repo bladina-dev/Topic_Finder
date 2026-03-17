@@ -92,6 +92,16 @@ CLICHE_PATTERNS_EN = [
     r"in today'?s (fast|ever)",
     r"in this article",
     r"did you know",
+    r"underdog outperforms",
+    r"hidden gem",
+    r"overcoming adversity",
+    r"the hero entrepreneur",
+    r"what \d+% of .* know",
+    r"trend (chasers|setters)",
+    r"beyond the headlines",
+    r"leveraging .*(insights|models)",
+    r"reporting trends without an angle",
+    r"generic data aggregation",
 ]
 
 CLICHE_PATTERNS_AR = [
@@ -101,6 +111,14 @@ CLICHE_PATTERNS_AR = [
     r"الدليل الشامل",
     r"نصائح هامة",
     r"أسرار النجاح",
+    r"إشارة خفية",
+    r"\d+ أشياء",
+    r"الأرقام تقول",
+    r"تسبح مع التيار",
+    r"سر (ال\w+ )?الذي",
+    r"قصة (الفشل|الاكتشاف)",
+    r"يفرق بين \w+ و\w+",
+    r"يربح السباق",
 ]
 
 VIRAL_SIGNAL_WORDS = [

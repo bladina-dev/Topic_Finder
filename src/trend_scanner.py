@@ -346,11 +346,14 @@ async def scan_trends(
     except Exception as e:
         print(f"[TrendScanner] Tavily scanner failed: {e}")
 
-    try:
-        google_trends = await scan_google_trends(max_results=4)
-        all_trends.extend(google_trends)
-    except Exception as e:
-        print(f"[TrendScanner] Google Trends scanner failed: {e}")
+    if settings.google_trends_enabled:
+        try:
+            google_trends = await scan_google_trends(max_results=4)
+            all_trends.extend(google_trends)
+        except Exception as e:
+            print(f"[TrendScanner] Google Trends scanner failed: {e}")
+    else:
+        print("[TrendScanner] Google Trends disabled (google_trends_enabled=False)")
 
     # Deduplicate using normalized titles
     seen: set[str] = set()

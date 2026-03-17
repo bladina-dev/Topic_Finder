@@ -23,6 +23,7 @@ You are NOT a generic content mill. You produce work that makes people stop scro
 
 ═══ BANNED PATTERNS (instant rejection) ═══
 NEVER use these clichés — they are the mark of lazy, forgettable content:
+English:
 - "Top X tips/ways/reasons"
 - "Here's how/why/what"
 - "Game-changer" / "Everything you need to know"
@@ -31,6 +32,20 @@ NEVER use these clichés — they are the mark of lazy, forgettable content:
 - "Beyond the headlines" / "The one thing everyone overlooks"
 - "Take your X to the next level"
 - "In today's fast-paced world"
+- "What X% of [Audience] Know"
+- "Trend Chasers vs. Trend Setters"
+- "overcoming adversity" / "the hero entrepreneur"
+- "hidden gem" / "underdog outperforms"
+- "Leveraging predictive models and deep cultural insights"
+Arabic:
+- "إشارة خفية" (overused mystery bait)
+- "3 أشياء" / "أفضل X أشياء"
+- "الأرقام تقول شيء ثاني"
+- "تسبح مع التيار وتصنع موجتك"
+- "سر الذي خرب..." (formula headline)
+- "قصة الفشل بسبب كلمة واحدة"
+- "قصة اكتشاف مؤثرة عبر السوشيال ميديا"
+- "يفرق بين متابع ومؤثر"
 - Starting with emoji-stuffed headlines (max 1 emoji)
 If you catch yourself writing ANY of these, delete it and try harder.
 
@@ -157,16 +172,18 @@ async def generate_with_gemini(
     system_prompt: str, user_prompt: str
 ) -> str:
     """Generate content using Google Gemini API."""
-    import google.generativeai as genai
+    from google import genai
+    from google.genai import types
 
-    genai.configure(api_key=settings.google_api_key)
+    client = genai.Client(api_key=settings.google_api_key)
 
-    model = genai.GenerativeModel(
-        model_name="gemini-2.5-flash",
-        system_instruction=system_prompt,
+    response = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=user_prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt,
+        ),
     )
-
-    response = model.generate_content(user_prompt)
     return response.text
 
 
@@ -179,7 +196,7 @@ async def generate_with_claude(
     client = AsyncAnthropic(api_key=settings.anthropic_api_key)
 
     response = await client.messages.create(
-        model="claude-sonnet-4-20250514",
+        model="claude-sonnet-4-6",
         max_tokens=4096,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
@@ -270,25 +287,27 @@ def _parse_angles_response(
     # Try to extract JSON from the response
     text = raw_text.strip()
 
-    # Remove markdown code fences if present
+    # Remove markdown code fences if present (handles ```json, ```JSON, ``` etc.)
     if text.startswith("```"):
         lines = text.split("\n")
+        # Skip first line (the fence + optional language tag)
         text = "\n".join(lines[1:])
-        if text.endswith("```"):
-            text = text[:-3]
+        # Strip closing fence
+        if text.rstrip().endswith("```"):
+            text = text.rstrip()[:-3]
         text = text.strip()
 
     try:
         data = json.loads(text)
     except json.JSONDecodeError:
-        # Try to find JSON in the response
+        # Try to find JSON object in the response
         start = text.find("{")
         end = text.rfind("}") + 1
         if start >= 0 and end > start:
             try:
                 data = json.loads(text[start:end])
             except json.JSONDecodeError:
-                # Return a single generic angle
+                print(f"[AIOrchestrator] Parse error for '{trend.title[:40]}'. Raw: {raw_text[:500]}")
                 return [ContentAngle(
                     headline=f"[Parse Error] Content for: {trend.title}",
                     hook="Generated content could not be parsed. Check AI response.",
@@ -296,6 +315,7 @@ def _parse_angles_response(
                     trend_source=trend.source,
                 )]
         else:
+            print(f"[AIOrchestrator] No JSON found for '{trend.title[:40]}'. Raw: {raw_text[:500]}")
             return [ContentAngle(
                 headline=f"[Parse Error] Content for: {trend.title}",
                 hook=raw_text[:200],

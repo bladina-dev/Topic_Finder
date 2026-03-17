@@ -1,67 +1,130 @@
-# Autonomous Marketing Agent
+# Marketing Agent — Autonomous Gulf/KSA Content Engine
 
-An AI-powered marketing agent designed to monitor current trends, analyze brand psychology, and generate highly targeted, culturally relevant content angles (with a specific focus on the Saudi/Gulf market).
+An AI agent that scans trends (Tavily, YouTube, Google Trends), applies Gulf-specific psychological triggers, and generates Arabic/English content angles scored across 6 quality dimensions. Runs on a schedule via GitHub Actions — no server required.
+
+**Current version:** v0.3.0 · **Next:** v0.4.0 in progress
+
+---
 
 ## Features
-- **Trend Scanning:** Integrates with Tavily to fetch real-time topics and hashtags in Saudi Arabia and the Gulf region.
-- **Psychological Triggers:** Applies deep cognitive triggers (FOMO, Zeigarnik effect, Curiosity gap, Loss Aversion, Social Proof, and Gain) tailored for sophisticated local audiences.
-- **Cultural Resonance:** Automatically injects local calendar events (e.g., Ramadan, Eid, Riyadh Season) into the ideation process.
-- **Benchmarking Engine:** Built-in quality assurance script (`run_benchmark.py`) that judges the creative novelty, hook power, brand alignment, and cultural relevance using an AI judge (Google Gemini).
 
-## Installation
+| Feature | Details |
+|---------|---------|
+| Trend Scanning | Tavily (general + targeted domains), YouTube channels + KSA trending |
+| AI Generation | Gemini 2.5 Flash (primary), Claude Sonnet (fallback), LM Studio (local) |
+| Psych Triggers | 6 Gulf-specific triggers: FOMO, Zeigarnik, Curiosity Gap, Loss Aversion, Social Proof, Gain |
+| Cultural Context | Auto-injects Ramadan, Eid, Riyadh Season, Vision 2030, Saudi work week |
+| Quality Benchmark | 6-dimension AI judge: CN / TD / VM / BA / CR / HP (max 60) |
+| Delivery | Telegram bot (@Trendozer_bot) — 🔥/✅/⚠️ graded reports |
+| Scheduling | GitHub Actions cron — 6 AM + 6 PM Cairo/Riyadh |
+| Source Management | CSV-based — editable in Excel, no code needed |
 
-This project is managed using `uv` for lightning-fast dependency resolution and virtual environments.
+---
 
-### Option 1: Using UV (Recommended)
-1. Install uv: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-2. Sync the project: `uv sync`
-3. Enter the environment: `uv run python run_benchmark.py --mode mock`
+## Quick Start
 
-### Option 2: Using standard pip
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+# Install
+uv sync
+
+# Test (no API calls)
+uv run python run_benchmark.py --mode mock --no-judge
+
+# Live run
+uv run python run_benchmark.py --mode live --trends 4 --angles 3
+
+# Full pipeline + Telegram report
+uv run python scripts/run_and_report.py
 ```
 
 ## Configuration
 
-The application requires specific API keys to function securely. Create your `.env` file from the example:
 ```bash
 cp .env.example .env
 ```
 
-And configure:
+Required keys:
 ```env
-GOOGLE_API_KEY="your-gemini-key"
-TAVILY_API_KEY="your-tavily-key"
+GOOGLE_API_KEY=        # Gemini generation + YouTube Data API
+TAVILY_API_KEY=        # Trend scanning
+TELEGRAM_BOT_TOKEN=    # @Trendozer_bot
+TELEGRAM_CHAT_ID=      # Delivery target
 ```
-*Note: The project uses Gemini (`gemini-2.5-flash`) for AI judging and generation.*
 
-## Running the Application
+Optional:
+```env
+ANTHROPIC_API_KEY=     # Claude fallback provider
+YOUTUBE_DATA_API_KEY=  # YouTube trending KSA (falls back to GOOGLE_API_KEY)
+GOOGLE_TRENDS_ENABLED= # false by default (pytrends SA endpoint broken as of March 2026)
+```
 
-### The Benchmark Engine
-To evaluate the quality of the generated angles:
+---
+
+## CLI Commands
 
 ```bash
-# Run with mock data (to test scoring heuristics without API calls)
-uv run python run_benchmark.py --mode mock --no-judge
-
-# Run live with Tavily and Gemini AI Judge
-uv run python run_benchmark.py --mode live --trends 4 --angles 3 
+uv run marketing-agent generate --sources saudi_general   # Generate angles from CSV source list
+uv run marketing-agent sources list                       # Show available CSV source files
+uv run marketing-agent sources add path/to/sources.csv    # Add a new source file
+uv run marketing-agent report                             # Generate + benchmark + save + send to Telegram
+uv run marketing-agent run                                # Full pipeline (same as GitHub Actions)
 ```
 
-The benchmark evaluates angles across 6 dimensions and generates a comprehensive terminal report and JSON dump of the results.
+---
 
 ## Project Structure
-- `src/benchmark.py`: Core logic for grading generation quality and filtering clichés.
-- `src/psychology.py`: Defines the psychology templates (Open Loop, Gain, Loss, etc.) with explicit rules and Gulf right/wrong examples.
-- `src/ai_orchestrator.py`: Prompt construction, AI provider routing, and cultural parameter injection.
-- `src/trend_scanner.py`: Searches the web via Tavily to harvest current hashtags and topics.
-- `run_benchmark.py`: Entrypoint for QA testing and iterating on prompt improvements.
 
-## Roadmap (V2 Features)
-- **Automated Scheduling:** Implement a twice-daily trigger (6:00 AM and 6:00 PM) via GitHub Actions or a local cron job so the agent runs autonomously and monitors trends during peak Gulf engagement hours.
-- **Direct Delivery Pipeline:** Automatically push the generated, 50+ score angles directly to the marketing team via WhatsApp, Telegram, or Email for immediate review and posting.
-- **Targeted Data Sources:** Expand trend scanning beyond general news by directly tracking specific industry websites and local influencers for hyper-current, niche ideas and data points.
-- **Predictive Scoring & Dark Social Integration:** (See V2 Features documentation for full list of upcoming upgrades).
+```
+src/
+  pipeline.py           — scan → generate → benchmark orchestration
+  trend_scanner.py      — Tavily, targeted CSV, Google Trends (optional)
+  yt_scanner.py         — YouTube channel scan + KSA trending (YouTube Data API v3)
+  ai_orchestrator.py    — multi-provider generation (Gemini / Claude / LM Studio)
+  benchmark.py          — 6-dimension scoring + cliché detection
+  source_manager.py     — CSV source management
+  report_writer.py      — MD / HTML / JSON / Telegram output
+  telegram_bot.py       — send-only bot (@Trendozer_bot)
+  config.py             — Pydantic Settings
+  cli.py                — Typer CLI entry point
+  api.py                — FastAPI server
+
+sources/                — CSV source lists (edit in Excel/Sheets)
+  saudi_general.csv     — 100 Saudi/Gulf sources across 10 verticals
+  youtube_channels.csv  — 30 KSA/Gulf YouTube channels
+
+scripts/run_and_report.py  — GitHub Actions entrypoint
+.github/workflows/
+  scheduled_run.yml     — cron: 03:00 + 15:00 UTC (6AM + 6PM Cairo)
+  telegram_command.yml  — /today, /sources, /status via Telegram webhook
+```
+
+---
+
+## Scoring System
+
+Each angle is judged across 6 dimensions (0–10 each, max 60):
+
+| Code | Dimension | What it measures |
+|------|-----------|-----------------|
+| CN | Creative Novelty | Fresh angle vs. cliché |
+| TD | Psych Trigger Depth | Does the trigger create a real reaction? |
+| VM | Viral Mechanics | Would people share/save/screenshot? |
+| BA | Brand Alignment | Coherent brand voice |
+| CR | Cultural Relevance | KSA/Gulf resonance (0=Western, 10=deeply local) |
+| HP | Hook Power | First sentence scroll-stop power |
+
+**Grades:** 🔥 Fire (≥48, ready to post) · ✅ Good (≥36, needs polish) · ⚠️ Weak (<36, skip)
+
+**Live benchmark results (2026-03-17):** avg 39.9/60 (🟡 B), top angle 49/60
+
+---
+
+## Roadmap
+
+| Version | Status | Focus |
+|---------|--------|-------|
+| v0.1.0 | ✅ Done | Core pipeline: Tavily + Gemini + benchmark |
+| v0.2.0 | ✅ Done | CSV sources, Telegram, GitHub Actions |
+| v0.3.0 | ✅ Done | YouTube scanner (yt-dlp + YouTube Data API v3) |
+| v0.4.0 | 🔄 In progress | google.genai migration, parse fixes, cliché expansion |
+| v0.5.0 | Planned | Predictive trend scoring, memory/learning layer |
