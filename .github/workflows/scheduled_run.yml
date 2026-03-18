@@ -2,8 +2,10 @@ name: Scheduled Marketing Agent Run
 
 on:
   schedule:
-    # Run every 5 minutes for real-time testing
-    - cron: '*/5 * * * *'
+    # 6:00 AM Cairo/Riyadh (UTC+3) = 03:00 UTC
+    - cron: '0 3 * * *'
+    # 6:00 PM Cairo/Riyadh (UTC+3) = 15:00 UTC
+    - cron: '0 15 * * *'
   workflow_dispatch:  # Manual trigger from GitHub UI
 
 env:
