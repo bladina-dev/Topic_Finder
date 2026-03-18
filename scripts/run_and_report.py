@@ -65,6 +65,17 @@ async def main():
         else:
             print("  → ⚠️ Telegram send failed (check token/chat_id)")
 
+        # Step 5: Sync to Notion
+        if settings.notion_api_key and settings.notion_parent_page_id:
+            print("\n[5/5] Syncing to Notion...")
+            try:
+                from src.notion_sync import ensure_database, push_angles
+                await ensure_database(settings.notion_parent_page_id)
+                notion_count = await push_angles(output, benchmark_results)
+                print(f"  → {notion_count} angles synced to Notion")
+            except Exception as e:
+                print(f"  → ⚠️ Notion sync failed (non-fatal): {e}")
+
         # Summary
         print("\n" + "=" * 60)
         if output.errors:

@@ -15,6 +15,9 @@ env:
   TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
   AZURE_SPEECH_KEY: ${{ secrets.AZURE_SPEECH_KEY }}
   AZURE_SPEECH_REGION: ${{ secrets.AZURE_SPEECH_REGION }}
+  NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+  NOTION_PARENT_PAGE_ID: ${{ secrets.NOTION_PARENT_PAGE_ID }}
+  NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
 
 jobs:
   run-pipeline:

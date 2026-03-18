@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     azure_speech_region: str = "eastus"
     azure_voice_name: str = "ar-SA-HamedNeural"  # Saudi Arabic male; alt: ar-SA-ZariyahNeural
 
+    # Notion Integration
+    notion_api_key: str = ""
+    notion_parent_page_id: str = ""
+    notion_database_id: str = ""
+
     # Google Trends (disabled — pytrends returns 404 on SA endpoint as of March 2026)
     google_trends_enabled: bool = False
 
