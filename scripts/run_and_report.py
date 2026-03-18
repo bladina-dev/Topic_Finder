@@ -66,15 +66,31 @@ async def main():
             print("  → ⚠️ Telegram send failed (check token/chat_id)")
 
         # Step 5: Save to Obsidian vault
+        written_records: list = []
         if settings.obsidian_vault_path:
-            print("\n[5/5] Saving to Obsidian vault...")
+            print("\n[5/6] Saving to Obsidian vault...")
             try:
                 from src.obsidian_sync import ensure_vault, push_angles as obsidian_push
                 vault_path = ensure_vault()
-                obsidian_count = obsidian_push(output, benchmark_results)
+                obsidian_count, written_records = obsidian_push(output, benchmark_results)
                 print(f"  → [Obsidian] {obsidian_count} angles saved to {vault_path}/angles/")
             except Exception as e:
                 print(f"  → ⚠️ Obsidian save failed (non-fatal): {e}")
+
+        # Step 6: Send Fire/Good angles for mobile approval
+        fire_good = [r for r in written_records if r[2] in ("fire", "good")]
+        if fire_good:
+            print(f"\n[6/6] Sending {len(fire_good)} angles for approval...")
+            try:
+                from src.telegram_bot import send_angle_for_approval
+                approval_sent = 0
+                for angle, trend, grade, filename_stem in fire_good:
+                    if await send_angle_for_approval(trend, angle, grade, filename_stem):
+                        approval_sent += 1
+                    await asyncio.sleep(0.5)
+                print(f"  → [6/6] Done: {approval_sent} angles sent for mobile approval")
+            except Exception as e:
+                print(f"  → ⚠️ Approval send failed (non-fatal): {e}")
 
         # Summary
         print("\n" + "=" * 60)

@@ -7,9 +7,15 @@ Uses the Telegram Bot API directly for simplicity.
 from __future__ import annotations
 
 import asyncio
+import html as _html
+from typing import TYPE_CHECKING
+
 import httpx
 
 from .config import settings
+
+if TYPE_CHECKING:
+    from .models import ContentAngle, Trend
 
 
 TELEGRAM_API = "https://api.telegram.org/bot{token}"
@@ -122,6 +128,81 @@ async def send_top_angles(
         lines.append("")
 
     return await send_text("\n".join(lines), chat_id=chat_id)
+
+
+async def send_angle_for_approval(
+    trend: "Trend",
+    angle: "ContentAngle",
+    grade: str,
+    angle_file: str,
+) -> bool:
+    """Send a single angle to Telegram with inline Approve/Skip buttons.
+
+    Args:
+        trend: The trend the angle was generated for.
+        angle: The content angle to review.
+        grade: Grade string — "fire", "good", or "weak".
+        angle_file: Filename stem (no extension) used as the callback key.
+
+    Returns:
+        True if sent successfully.
+    """
+    token = settings.telegram_bot_token
+    chat_id = settings.telegram_chat_id
+    if not token or not chat_id:
+        return False
+
+    grade_label = {"fire": "🔥 Fire", "good": "✅ Good", "weak": "⚠️ Weak"}.get(grade, grade)
+
+    trend_title = _html.escape(trend.title)
+    if trend.description:
+        trend_context = _html.escape(trend.description[:200])
+    elif trend.url:
+        source = _html.escape(trend.source_name or trend.source.value)
+        trend_context = f"Source: {source} | {_html.escape(trend.url)}"
+    else:
+        trend_context = f"Source: {_html.escape(trend.source_name or trend.source.value)}"
+
+    headline = _html.escape(angle.headline)
+    hook = _html.escape(angle.hook[:200])
+    platform = _html.escape(angle.platform.value)
+    triggers = _html.escape(", ".join(t.type.value for t in angle.psych_triggers))
+
+    text = (
+        f"<b>📡 TREND: {trend_title}</b>\n"
+        f"{trend_context}\n\n"
+        f"<b>📌 {headline}</b>\n"
+        f"<i>{hook}</i>\n\n"
+        f"{grade_label} | 🎯 {triggers} | {platform}"
+    )
+
+    # callback_data limit is 64 bytes — "approve:" = 8 chars, leave 50 for stem
+    file_stem = angle_file[:50]
+    reply_markup = {
+        "inline_keyboard": [[
+            {"text": "✅ Approve", "callback_data": f"approve:{file_stem}"},
+            {"text": "❌ Skip", "callback_data": f"skip:{file_stem}"},
+        ]]
+    }
+
+    url = f"{TELEGRAM_API.format(token=token)}/sendMessage"
+    payload = {
+        "chat_id": chat_id,
+        "text": text,
+        "parse_mode": "HTML",
+        "reply_markup": reply_markup,
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(url, json=payload)
+            if response.status_code == 200:
+                return True
+            print(f"[Telegram] Approval send failed: {response.status_code} — {response.text[:200]}")
+            return False
+    except Exception as e:
+        print(f"[Telegram] Error sending approval message: {e}")
+        return False
 
 
 def _split_message(text: str) -> list[str]:

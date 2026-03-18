@@ -117,10 +117,10 @@ def _write_angle_file(
 def push_angles(
     output: AgentOutput,
     benchmark_results: list[dict] | None = None,
-) -> int:
+) -> tuple[int, list[tuple[ContentAngle, Trend, str, str]]]:
     """Write all ContentAngle objects from output as markdown files in the vault.
 
-    Returns the count of angles successfully written.
+    Returns (count_written, [(angle, trend, grade, filename_stem), ...]).
     """
     vault_path = ensure_vault()
 
@@ -132,12 +132,16 @@ def push_angles(
                 score_map[headline] = float(result.get("total", 0.0))
 
     count = 0
+    written: list[tuple[ContentAngle, Trend, str, str]] = []
     n = 0
     for trend_with_angles in output.results:
         trend = trend_with_angles.trend
         for angle in trend_with_angles.angles:
             total_score = score_map.get(angle.headline, 0.0)
             grade = _grade(total_score)
+            today = __import__("datetime").datetime.now().strftime("%Y-%m-%d")
+            slug = _trend_slug(trend.title)
+            filename_stem = f"{today}_{slug}_{n:03d}"
             if _write_angle_file(
                 vault_path=vault_path,
                 angle=angle,
@@ -147,9 +151,46 @@ def push_angles(
                 n=n,
             ):
                 count += 1
+                written.append((angle, trend, grade, filename_stem))
             n += 1
 
-    return count
+    return count, written
+
+
+def update_angle_status(vault_path: str, filename_stem: str, new_status: str) -> bool:
+    """Update the status field in a markdown file's YAML frontmatter.
+
+    Returns True on success.
+    """
+    try:
+        filepath = Path(vault_path) / "angles" / f"{filename_stem}.md"
+        if not filepath.exists():
+            print(f"[Obsidian] File not found: {filepath}")
+            return False
+
+        content = filepath.read_text(encoding="utf-8")
+        lines = content.splitlines()
+        in_frontmatter = False
+        fm_count = 0
+        new_lines: list[str] = []
+        for line in lines:
+            if line.strip() == "---":
+                fm_count += 1
+                in_frontmatter = fm_count == 1
+                new_lines.append(line)
+                if fm_count == 2:
+                    in_frontmatter = False
+            elif in_frontmatter and line.startswith("status:"):
+                new_lines.append(f"status: {new_status}")
+            else:
+                new_lines.append(line)
+
+        filepath.write_text("\n".join(new_lines), encoding="utf-8")
+        return True
+
+    except Exception as e:
+        print(f"[Obsidian] Warning: update_angle_status failed for '{filename_stem}': {e}")
+        return False
 
 
 def _parse_frontmatter(content: str) -> dict[str, str]:
