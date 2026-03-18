@@ -58,7 +58,23 @@ async def run_pipeline(
         errors.append("No trends found")
         return AgentOutput(errors=errors)
 
-    # Step 2: Generate angles for each trend
+    # Step 2: Load Notion feedback to guide angle generation
+    feedback_context = ""
+    if settings.notion_api_key and settings.notion_database_id:
+        try:
+            from .notion_sync import fetch_feedback, format_feedback_prompt
+            feedback = await fetch_feedback(settings.notion_database_id)
+            feedback_context = format_feedback_prompt(feedback)
+            n_approved = len(feedback.get("approved", []))
+            n_skipped = len(feedback.get("skipped", []))
+            if feedback_context:
+                print(f"[Pipeline] Loaded feedback: {n_approved} approved, {n_skipped} skipped patterns")
+            else:
+                print("[Pipeline] No Notion feedback yet (all angles still 'New')")
+        except Exception as e:
+            print(f"[Pipeline] Notion feedback load failed (non-fatal): {e}")
+
+    # Step 3: Generate angles for each trend
     print(f"[Pipeline] Generating {angles_per_trend} angles per trend...")
 
     for trend in trends:
@@ -75,6 +91,7 @@ async def run_pipeline(
                     brand_context=brand_context,
                     angles_count=angles_per_trend,
                     provider=provider,
+                    feedback_context=feedback_context,
                 )
 
             results.append(TrendWithAngles(trend=trend, angles=angles))

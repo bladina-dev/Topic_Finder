@@ -360,6 +360,7 @@ async def generate_angles_for_trend(
     brand_context: str = "",
     angles_count: int = 3,
     provider: AIProvider | None = None,
+    feedback_context: str = "",
 ) -> list[ContentAngle]:
     """Generate content angles for a single trend.
 
@@ -386,6 +387,9 @@ async def generate_angles_for_trend(
         cultural_context=cultural_ctx,
         brand_context=brand_context or "No brand documents uploaded. Generate general marketing angles.",
     )
+
+    if feedback_context:
+        user_prompt = user_prompt + "\n\n" + feedback_context
 
     # Generate
     raw_response = await generate_content(psych_prompt, user_prompt, provider)
