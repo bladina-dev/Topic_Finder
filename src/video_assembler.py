@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import logging
 import shutil
 import subprocess
 
 from rich.console import Console
 
+logger = logging.getLogger(__name__)
 console = Console()
+
+_FFMPEG_TIMEOUT = 300  # seconds — kill if ffmpeg hangs
 
 
 def assemble_video(
@@ -20,8 +24,8 @@ def assemble_video(
 
     Args:
         video_path: Path to the Remotion-rendered MP4.
-        voiceover_path: Path to the ElevenLabs voiceover MP3 (or None).
-        music_path: Path to the background music MP3 (or None).
+        voiceover_path: Path to the voiceover MP3 (or None to skip).
+        music_path: Path to the background music MP3 (or None to skip).
         output_path: Where to write the final MP4.
 
     Returns:
@@ -29,11 +33,19 @@ def assemble_video(
 
     Raises:
         RuntimeError: If ffmpeg is not installed.
+        subprocess.TimeoutExpired: If ffmpeg hangs beyond 5 minutes.
     """
     if not shutil.which("ffmpeg"):
-        raise RuntimeError("ffmpeg not found — install with: brew install ffmpeg")
+        raise RuntimeError(
+            "ffmpeg not found — install with: sudo apt install ffmpeg  (Linux) "
+            "or: brew install ffmpeg  (macOS)"
+        )
 
     console.print("[cyan]🎬 Assembling final video...[/cyan]")
+    logger.info(
+        "Assembling video: video=%s voiceover=%s music=%s output=%s",
+        video_path, voiceover_path, music_path, output_path,
+    )
 
     if voiceover_path and music_path:
         cmd = [
@@ -67,13 +79,9 @@ def assemble_video(
             output_path,
         ]
     else:
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", video_path,
-            "-c", "copy",
-            output_path,
-        ]
+        cmd = ["ffmpeg", "-y", "-i", video_path, "-c", "copy", output_path]
 
-    subprocess.run(cmd, check=True)
+    subprocess.run(cmd, check=True, timeout=_FFMPEG_TIMEOUT)
+    logger.info("Video assembled: %s", output_path)
     console.print(f"[bold green]✅ Final video:[/bold green] {output_path}")
     return output_path

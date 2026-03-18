@@ -63,6 +63,11 @@ class Settings(BaseSettings):
     # Sources
     default_sources: str = "saudi_general"
 
+    # Azure Speech (TTS voiceover — replaces ElevenLabs)
+    azure_speech_key: str = ""
+    azure_speech_region: str = "eastus"
+    azure_voice_name: str = "ar-SA-HamedNeural"  # Saudi Arabic male; alt: ar-SA-ZariyahNeural
+
     # Google Trends (disabled — pytrends returns 404 on SA endpoint as of March 2026)
     google_trends_enabled: bool = False
 

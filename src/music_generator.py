@@ -1,18 +1,25 @@
-"""MiniMax Audio — AI background music generation via REST API."""
+"""MiniMax Audio — AI background music generation via REST API.
+
+No MiniMax key? Returns None cleanly. video_assembler handles None music_path
+by assembling video without background music.
+"""
 
 from __future__ import annotations
 
 import base64
-import os
+import logging
 from pathlib import Path
 
 import httpx
+from tenacity import retry, stop_after_attempt, wait_exponential
 from rich.console import Console
 
-_MINIMAX_URL = "https://api.minimax.chat/v1/music_generation"
-_DEFAULT_MUSIC_FILENAME = "EleEnergetic, Social Media Creator_pre_sp109_s50_sb75_v3.mp3"
+from .config import settings
 
+logger = logging.getLogger(__name__)
 console = Console()
+
+_MINIMAX_URL = "https://api.minimax.chat/v1/music_generation"
 
 
 def _generate_music_prompt(video_data: dict) -> str:
@@ -26,55 +33,59 @@ def _generate_music_prompt(video_data: dict) -> str:
     )
 
 
-async def generate_bg_music(
-    prompt: str,
-    output_path: str,
-    mock: bool = False,
-) -> str:
-    """Generate background music and save to output_path.
-
-    Args:
-        prompt: Music generation prompt.
-        output_path: Full path (including filename) to save the MP3.
-        mock: If True, write a placeholder file without calling the API.
-
-    Returns:
-        Path to the saved audio file as a string.
-    """
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-
-    if mock:
-        # Write a silent placeholder so the path exists
-        Path(output_path).write_bytes(b"\xff\xfb\x00\x00" * 16)  # minimal MP3-like header
-        console.print(f"[bold green]✅ Music saved (mock):[/bold green] {output_path}")
-        return output_path
-
-    api_key = os.environ.get("MINIMAX_API_KEY", "")
-    if not api_key:
-        console.print("[yellow]⚠️ MINIMAX_API_KEY not set — using default background music[/yellow]")
-        # Return path to the static default (may not exist locally; caller handles it)
-        return _DEFAULT_MUSIC_FILENAME
-
-    console.print(f"[cyan]🎵 Generating background music ({len(prompt)} char prompt)...[/cyan]")
-
+@retry(
+    wait=wait_exponential(multiplier=1, min=2, max=60),
+    stop=stop_after_attempt(3),
+    reraise=True,
+)
+async def _call_minimax(prompt: str, output_path: str) -> str:
+    """Call MiniMax music API with retry. Raises on failure after 3 attempts."""
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {settings.minimax_api_key}",
         "Content-Type": "application/json",
     }
-    payload = {
-        "model": "music-01",
-        "prompt": prompt,
-        "refer_voice": None,
-    }
+    payload = {"model": "music-01", "prompt": prompt, "refer_voice": None}
 
     async with httpx.AsyncClient(timeout=120.0) as client:
         response = await client.post(_MINIMAX_URL, headers=headers, json=payload)
         response.raise_for_status()
         data = response.json()
 
-    audio_b64: str = data["audio_file"]
-    audio_bytes = base64.b64decode(audio_b64)
+    audio_bytes = base64.b64decode(data["audio_file"])
     Path(output_path).write_bytes(audio_bytes)
-
-    console.print(f"[bold green]✅ Music saved:[/bold green] {output_path}")
     return output_path
+
+
+async def generate_bg_music(
+    prompt: str,
+    output_path: str,
+    mock: bool = False,
+) -> str | None:
+    """Generate background music and save to output_path.
+
+    Returns path to saved MP3, or None if MiniMax is not configured or fails.
+    Caller (video_assembler) handles None by assembling video without music.
+    """
+    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+
+    if mock:
+        Path(output_path).write_bytes(b"\xff\xfb\x00\x00" * 16)
+        logger.info("Music saved (mock): %s", output_path)
+        console.print(f"[bold green]✅ Music saved (mock):[/bold green] {output_path}")
+        return output_path
+
+    if not getattr(settings, "minimax_api_key", ""):
+        logger.warning("MINIMAX_API_KEY not set — skipping background music")
+        console.print("[yellow]⚠️ MINIMAX_API_KEY not set — video will have no background music[/yellow]")
+        return None
+
+    console.print(f"[cyan]🎵 Generating background music ({len(prompt)} char prompt)...[/cyan]")
+    try:
+        result = await _call_minimax(prompt, output_path)
+        logger.info("Music saved: %s", result)
+        console.print(f"[bold green]✅ Music saved:[/bold green] {result}")
+        return result
+    except Exception as e:
+        logger.error("MiniMax music generation failed after retries: %s", e)
+        console.print(f"[red]❌ Music generation failed: {e} — continuing without music[/red]")
+        return None

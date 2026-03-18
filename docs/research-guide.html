@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topic Finder — Research Guide</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f6f8fa;
+    color: #24292f;
+    margin: 0;
+    padding: 32px 20px;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; }
+
+  h1 { font-size: 1.8rem; margin-bottom: 4px; }
+  .subtitle { color: #57606a; margin-bottom: 40px; font-size: .95rem; }
+
+  h2 { font-size: 1.1rem; font-weight: 700; margin: 0 0 16px; }
+  h3 { font-size: .9rem; font-weight: 700; margin: 16px 0 6px; color: #57606a; text-transform: uppercase; letter-spacing: .05em; }
+
+  .section {
+    background: #fff;
+    border: 1px solid #d0d7de;
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 20px;
+  }
+  .section.urgent { border-left: 4px solid #cf222e; }
+  .section.high   { border-left: 4px solid #fb8500; }
+  .section.medium { border-left: 4px solid #1a7f37; }
+  .section.info   { border-left: 4px solid #0969da; }
+
+  .tag {
+    display: inline-block;
+    border-radius: 20px;
+    padding: 2px 10px;
+    font-size: .75rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .tag.red    { background: #ffebe9; color: #cf222e; }
+  .tag.orange { background: #fff1e5; color: #953800; }
+  .tag.green  { background: #dafbe1; color: #1a7f37; }
+  .tag.blue   { background: #ddf4ff; color: #0969da; }
+  .tag.purple { background: #fbefff; color: #8250df; }
+
+  ul { margin: 8px 0; padding-left: 20px; }
+  li { margin-bottom: 6px; font-size: .9rem; }
+
+  .question {
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 6px 0;
+    font-size: .88rem;
+  }
+  .question::before { content: "❓ "; }
+
+  .decision {
+    background: #fff8c5;
+    border: 1px solid #d4a72c;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin: 6px 0;
+    font-size: .88rem;
+  }
+  .decision::before { content: "✅ Decide: "; font-weight: 600; }
+
+  .options {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+  }
+  .option {
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    padding: 8px 14px;
+    font-size: .82rem;
+    flex: 1;
+    min-width: 140px;
+  }
+  .option strong { display: block; margin-bottom: 3px; }
+
+  code {
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: .82rem;
+    font-family: 'Cascadia Code', monospace;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .status-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 32px;
+  }
+  .stat {
+    background: #fff;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    padding: 12px 18px;
+    text-align: center;
+    flex: 1;
+    min-width: 100px;
+  }
+  .stat .num { font-size: 1.6rem; font-weight: 700; }
+  .stat .label { font-size: .75rem; color: #57606a; }
+  .stat.red .num   { color: #cf222e; }
+  .stat.orange .num{ color: #953800; }
+  .stat.green .num { color: #1a7f37; }
+
+  footer { text-align: center; color: #57606a; font-size: .8rem; margin-top: 40px; }
+  hr { border: none; border-top: 1px solid #d0d7de; margin: 20px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Topic Finder — Research Guide</h1>
+  <p class="subtitle">Questions to answer before deciding what to build next. Written 2026-03-18.</p>
+
+  <div class="status-bar">
+    <div class="stat red"><div class="num">4</div><div class="label">Need decision now</div></div>
+    <div class="stat orange"><div class="num">5</div><div class="label">Research first</div></div>
+    <div class="stat green"><div class="num">3</div><div class="label">Ready to build</div></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 1 — VOICE -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section urgent">
+    <span class="tag red">Decide Now</span>
+    <h2>1. Voiceover — Azure vs Alternatives</h2>
+    <p>Azure TTS is now wired up (<code>ar-SA-HamedNeural</code>). Before testing, answer these:</p>
+
+    <div class="question">Does the Saudi Arabic voice sound natural enough for YouTube Shorts, or does it sound robotic?</div>
+    <div class="question">Do you want a male or female voice? Azure has both: <code>ar-SA-HamedNeural</code> (male) and <code>ar-SA-ZariyahNeural</code> (female).</div>
+    <div class="question">Should the voiceover read the full script or just the hook + key points?</div>
+
+    <div class="decision">Test Azure TTS output quality before committing to it long-term.</div>
+
+    <h3>If Azure sounds robotic — alternatives to research</h3>
+    <div class="options">
+      <div class="option"><strong>ElevenLabs</strong>~$5/mo starter. Best Arabic naturalness. Research: do they have a Gulf dialect voice?</div>
+      <div class="option"><strong>Play.ht</strong>Has Arabic. Research: voice quality vs Azure for Saudi dialect.</div>
+      <div class="option"><strong>OpenAI TTS</strong>No Arabic yet as of 2026. Research: has this changed?</div>
+      <div class="option"><strong>Google Cloud TTS</strong>Has <code>ar-XA</code> Wavenet. Research: quality vs Azure, cost per character.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 2 — MUSIC -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section high">
+    <span class="tag orange">Research First</span>
+    <h2>2. Background Music — What to Use Instead of MiniMax</h2>
+    <p>MiniMax music generation is skipped (no key). Videos currently assemble without background music.</p>
+
+    <div class="question">Is background music actually needed for the Shorts to perform well, or can you launch without it?</div>
+    <div class="question">Are there royalty-free Arabic/Gulf music libraries that work for YouTube without copyright strikes?</div>
+
+    <h3>Options to research</h3>
+    <div class="options">
+      <div class="option"><strong>Static library</strong>Download 5–10 royalty-free tracks, rotate them. Free, no API. Research: YouTube-safe Gulf music sources.</div>
+      <div class="option"><strong>YouTube Audio Library</strong>Free, YouTube-safe. Research: does it have Arabic/Gulf style tracks?</div>
+      <div class="option"><strong>Suno AI</strong>AI music generation. Research: API availability, cost, Arabic style support.</div>
+      <div class="option"><strong>MiniMax</strong>Already wired. Research: pricing, how to get an API key.</div>
+    </div>
+
+    <div class="decision">Easiest path: download 5 royalty-free tracks into <code>assets/music/</code> and rotate them. No API needed.</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 3 — TREND SOURCES -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section high">
+    <span class="tag orange">Research First</span>
+    <h2>3. Trend Discovery — Are Current Sources Strong Enough?</h2>
+    <p>Current sources: Tavily web search + 30 YouTube channels + Google Trends (disabled).</p>
+
+    <div class="question">Which trends from past reports actually performed well? (Check Telegram history for engagement.)</div>
+    <div class="question">Are there Saudi-specific platforms being missed? (Snapchat is huge in KSA — any API or scraping?)</div>
+    <div class="question">Should Twitter/X KSA trending topics be added as a source?</div>
+    <div class="question">Is Tavily returning Saudi-relevant results, or mostly global English content?</div>
+
+    <h3>Sources to evaluate adding</h3>
+    <div class="options">
+      <div class="option"><strong>Twitter/X Trends KSA</strong>Real-time. Research: does the free API tier expose trending topics by country?</div>
+      <div class="option"><strong>Snapchat Discover KSA</strong>Dominant in Saudi. Research: any public API or scraping approach.</div>
+      <div class="option"><strong>Reddit (r/saudiarabia)</strong>English but signals Gulf topics. Research: Reddit API cost after 2023 changes.</div>
+      <div class="option"><strong>Google Trends fix</strong>Currently broken with pytrends. Research: is there an official Google Trends API now?</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 4 — VIDEO RENDERING -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section high">
+    <span class="tag orange">Research First</span>
+    <h2>4. Video Rendering — Is Remotion Practical in GitHub Actions?</h2>
+    <p>The pipeline generates Remotion JSON. Actual MP4 rendering requires a Node.js + Chrome environment.</p>
+
+    <div class="question">Is Remotion rendering actually happening in GitHub Actions, or is the JSON just saved locally?</div>
+    <div class="question">How long does a Remotion render take? Does it fit in the 15-minute GitHub Actions timeout?</div>
+    <div class="question">Does the ubuntu-latest GitHub Actions runner have enough RAM for Remotion + Chrome headless?</div>
+
+    <h3>Alternatives if Remotion is too heavy for CI</h3>
+    <div class="options">
+      <div class="option"><strong>Remotion Lambda</strong>Render in AWS Lambda. Research: cost per render, setup complexity.</div>
+      <div class="option"><strong>FFmpeg templates</strong>Pre-built video templates, overlay text with FFmpeg. No browser needed. Much faster.</div>
+      <div class="option"><strong>Shotstack API</strong>Cloud video rendering API. Research: Arabic text support, cost per render.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 5 — CONTENT QUALITY -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section medium">
+    <span class="tag green">Ready to Measure</span>
+    <h2>5. Content Quality — How Good Are the Angles Actually?</h2>
+    <p>Benchmark averages B grade (39.9/60) from live run. But benchmark scores are self-assessed by Gemini.</p>
+
+    <div class="question">Have any of the generated angles been tested with real humans? What was the reaction?</div>
+    <div class="question">Is the 6-dimension scoring (CN/TD/VM/BA/CR/HP) actually predictive of real content performance?</div>
+    <div class="question">What's the cliché rate after v0.4.0 expansion? (Run mock benchmark and check.)</div>
+
+    <div class="decision">Run one live benchmark, send best angle to a small test audience, measure click rate. This tells you if the scoring is meaningful.</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 6 — DELIVERY -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section medium">
+    <span class="tag green">Ready to Build</span>
+    <h2>6. Delivery — Telegram is Working, What's Next?</h2>
+    <p>Telegram reports are working. The question is whether Telegram is the right final destination.</p>
+
+    <div class="question">Who receives the Telegram reports? Just you, or a team?</div>
+    <div class="question">Should the agent also post directly to a content calendar tool (Notion, Airtable)?</div>
+    <div class="question">Should the final video be auto-uploaded to YouTube Shorts as a draft?</div>
+
+    <h3>Options to research</h3>
+    <div class="options">
+      <div class="option"><strong>YouTube Data API upload</strong>Auto-upload as private draft. Research: OAuth2 setup for automated uploads.</div>
+      <div class="option"><strong>Notion database</strong>Push angles as Notion pages for team review. Research: Notion API, does it support Arabic text well?</div>
+      <div class="option"><strong>WhatsApp Business</strong>Higher open rate than Telegram in KSA. Research: WhatsApp Cloud API free tier limits.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 7 — MEMORY & LEARNING -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section info">
+    <span class="tag blue">Future Phase</span>
+    <h2>7. Memory — Should the Agent Learn From Past Runs?</h2>
+    <p>Currently stateless — every run starts fresh with no knowledge of what was generated before.</p>
+
+    <div class="question">Are the same trends being re-discovered across runs? (Check past Telegram reports for duplicates.)</div>
+    <div class="question">Should the agent remember which angles scored well and avoid similar ones?</div>
+    <div class="question">Memory Hub v5 is already running — can Topic Finder be connected to it?</div>
+
+    <h3>What connecting to Memory Hub would give you</h3>
+    <ul>
+      <li>No duplicate trend angles across runs</li>
+      <li>Track which angles were approved/rejected and learn from that</li>
+      <li>Brand voice consistency across sessions</li>
+      <li>A history of what worked — feeds back into psychology engine</li>
+    </ul>
+    <div class="decision">Research: what would it take to call Memory Hub from <code>pipeline.py</code>? The API is already at <code>http://localhost:8000/api/v1/memory</code>.</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 8 — COSTS -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section urgent">
+    <span class="tag red">Decide Now</span>
+    <h2>8. API Costs — What Is This Costing Per Run?</h2>
+    <p>With 5-minute scheduling (288 runs/day), costs could be significant. Need to know before scaling.</p>
+
+    <div class="question">How many Tavily credits does one pipeline run use? (Check Tavily dashboard.)</div>
+    <div class="question">How many Gemini tokens per run? (Check Google Cloud console.)</div>
+    <div class="question">What is the Azure TTS cost per voiceover? (Azure charges per character.)</div>
+    <div class="question">At Phase 2 (10×/day) and Phase 3 (4×/day), what is the monthly cost?</div>
+
+    <h3>Cost estimates to calculate</h3>
+    <div class="grid-2">
+      <div>
+        <strong>Per run (estimate):</strong>
+        <ul>
+          <li>Tavily: ~10 searches × $0.01 = ~$0.10</li>
+          <li>Gemini 2.5 Flash: ~50K tokens × free tier = $0</li>
+          <li>Azure TTS: ~500 chars × $0.000016 = ~$0.008</li>
+          <li><strong>Total: ~$0.11/run</strong></li>
+        </ul>
+      </div>
+      <div>
+        <strong>Monthly at each phase:</strong>
+        <ul>
+          <li>Phase 1 (288/day): ~$950/mo ⚠️</li>
+          <li>Phase 2 (10/day): ~$33/mo</li>
+          <li>Phase 3 (4/day): ~$13/mo ✅</li>
+        </ul>
+      </div>
+    </div>
+    <div class="decision">Verify actual Tavily + Gemini costs from dashboards. Phase 1 (5-min) is likely unsustainable past a few days of testing.</div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- SECTION 9 — INFRASTRUCTURE -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section info">
+    <span class="tag purple">Long Term</span>
+    <h2>9. Infrastructure — GitHub Actions Forever?</h2>
+    <p>GitHub Actions is great for testing but has limits: 15-min timeout, no persistent state, cold start every run.</p>
+
+    <div class="question">Is the 15-minute GitHub Actions timeout enough for a full pipeline run with video assembly?</div>
+    <div class="question">When the agent grows (more sources, memory, video rendering), will GitHub Actions still work?</div>
+
+    <h3>Alternatives to research when ready</h3>
+    <div class="options">
+      <div class="option"><strong>Railway / Render</strong>Always-on Python server with APScheduler. No cold start. Research: cost for a 512MB instance.</div>
+      <div class="option"><strong>Fly.io</strong>Free tier with 3 shared VMs. Research: can it run Remotion rendering?</div>
+      <div class="option"><strong>Self-hosted (your machine)</strong>Already running locally. Use the built-in APScheduler (<code>scheduler.py</code>). Zero cost. Downside: only works when machine is on.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════ -->
+  <!-- PRIORITY ORDER -->
+  <!-- ══════════════════════════════════════════ -->
+  <div class="section info">
+    <span class="tag blue">Suggested Order</span>
+    <h2>What to Research & Decide First</h2>
+    <ol>
+      <li><strong>Test Azure TTS quality</strong> (Section 1) — run it, listen to the output, decide if it's good enough</li>
+      <li><strong>Check API costs</strong> (Section 8) — open Tavily + Google Cloud dashboards now while Phase 1 is running</li>
+      <li><strong>Pick a music approach</strong> (Section 2) — static royalty-free tracks is the fastest path</li>
+      <li><strong>Verify Remotion renders</strong> (Section 4) — does the full video pipeline actually produce an MP4?</li>
+      <li><strong>Check for duplicate trends</strong> (Section 7) — if duplicates appear, Memory Hub integration becomes urgent</li>
+    </ol>
+  </div>
+
+  <footer>Topic Finder · Research Guide · Written by Claude Code 2026-03-18</footer>
+</div>
+</body>
+</html>
