@@ -58,21 +58,22 @@ async def run_pipeline(
         errors.append("No trends found")
         return AgentOutput(errors=errors)
 
-    # Step 2: Load Notion feedback to guide angle generation
+    # Step 2: Load Obsidian feedback to guide angle generation
     feedback_context = ""
-    if settings.notion_api_key and settings.notion_database_id:
+    if settings.obsidian_vault_path:
         try:
-            from .notion_sync import fetch_feedback, format_feedback_prompt
-            feedback = await fetch_feedback(settings.notion_database_id)
+            from pathlib import Path as _Path
+            from .obsidian_sync import fetch_feedback, format_feedback_prompt
+            feedback = fetch_feedback(_Path(settings.obsidian_vault_path))
             feedback_context = format_feedback_prompt(feedback)
             n_approved = len(feedback.get("approved", []))
             n_skipped = len(feedback.get("skipped", []))
             if feedback_context:
                 print(f"[Pipeline] Loaded feedback: {n_approved} approved, {n_skipped} skipped patterns")
             else:
-                print("[Pipeline] No Notion feedback yet (all angles still 'New')")
+                print("[Pipeline] No feedback yet")
         except Exception as e:
-            print(f"[Pipeline] Notion feedback load failed (non-fatal): {e}")
+            print(f"[Pipeline] Obsidian feedback load failed (non-fatal): {e}")
 
     # Step 3: Generate angles for each trend
     print(f"[Pipeline] Generating {angles_per_trend} angles per trend...")

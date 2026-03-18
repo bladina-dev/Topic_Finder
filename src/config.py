@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     notion_parent_page_id: str = ""
     notion_database_id: str = ""
 
+    # Obsidian Vault
+    obsidian_vault_path: str = "./obsidian-vault"
+
     # Google Trends (disabled — pytrends returns 404 on SA endpoint as of March 2026)
     google_trends_enabled: bool = False
 
