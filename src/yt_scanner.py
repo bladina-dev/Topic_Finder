@@ -101,7 +101,7 @@ Return ONLY a JSON object with this exact schema:
 }}"""
 
         response = client.models.generate_content(
-            model="gemini-1.5-flash",
+            model="gemini-2.0-flash-lite",
             contents=prompt,
             config=types.GenerateContentConfig(
                 safety_settings=[

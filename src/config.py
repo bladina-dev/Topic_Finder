@@ -62,6 +62,11 @@ class Settings(BaseSettings):
 
     # Sources
     default_sources: str = "saudi_general"
+    seed_keywords_sources: str = "seed_keywords"
+    influencer_scan_enabled: bool = True
+
+    # SerpAPI
+    serpapi_api_key: str = ""
 
     # Azure Speech (TTS voiceover — replaces ElevenLabs)
     azure_speech_key: str = ""

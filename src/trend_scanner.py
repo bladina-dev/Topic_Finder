@@ -8,7 +8,7 @@ from datetime import datetime
 from urllib.parse import urlparse
 
 from .config import settings
-from .models import Trend, TrendSource
+from .models import Trend, TrendSource, TopicOrigin
 
 
 def _parse_date(date_str: str) -> datetime | None:
@@ -134,9 +134,11 @@ async def scan_tavily(max_results: int = 8) -> list[Trend]:
     client = AsyncTavilyClient(api_key=settings.tavily_api_key)
 
     queries = [
-        "trending topics Saudi Arabia KSA today",
-        "Gulf business news today",
-        "Saudi Arabia X Twitter trending today",
+        "Saudi Arabia business news today",
+        "Saudi tech startups latest",
+        "KSA economy finance update this week",
+        "Riyadh entertainment events culture",
+        "Saudi e-commerce digital marketing news",
     ]
 
     trends: list[Trend] = []
@@ -169,6 +171,7 @@ async def scan_tavily(max_results: int = 8) -> list[Trend]:
                         title=title,
                         description=item.get("content", "")[:300],
                         source=source,
+                        origin=TopicOrigin.TREND,
                         url=item_url,
                         published_at=pub_date,
                         source_name=domain,
@@ -229,6 +232,7 @@ async def scan_targeted_sources(
                         title=title,
                         description=item.get("content", "")[:300],
                         source=TrendSource.TARGETED,
+                        origin=TopicOrigin.TREND,
                         url=item_url,
                         published_at=pub_date,
                         source_name=domain,
@@ -244,55 +248,47 @@ async def scan_targeted_sources(
     return trends[:max_results]
 
 
-async def scan_google_trends(max_results: int = 4) -> list[Trend]:
-    """Scan Google Trends for Saudi Arabia trending searches.
+async def scan_serpapi_trends(max_results: int = 5) -> list[Trend]:
+    """Scan Google Trends for Saudi Arabia via SerpAPI."""
+    if not settings.serpapi_api_key:
+        return []
 
-    Includes retry logic with exponential backoff for 404 errors.
-    """
-    from pytrends.request import TrendReq
+    from serpapi import GoogleSearch
 
     trends: list[Trend] = []
-    max_retries = 3
-
-    for attempt in range(max_retries):
-        try:
-            pytrends = TrendReq(hl="ar", tz=180, timeout=(10, 25))
-            trending = pytrends.trending_searches(pn="saudi_arabia")
-
-            for i, row in trending.head(max_results).iterrows():
-                title = str(row.iloc[0]).strip()
-                if title:
-                    trends.append(Trend(
-                        title=title,
-                        description="Trending on Google in Saudi Arabia",
-                        source=TrendSource.GOOGLE_TRENDS,
-                        url=f"https://trends.google.com/trends/explore?q={title}&geo=SA",
-                        published_at=datetime.now(),
-                        source_name="Google Trends KSA",
-                        jack_potential=0.6,
-                        region="KSA",
-                        discovered_at=datetime.now(),
-                    ))
-            return trends  # Success, exit retry loop
-
-        except Exception as e:
-            wait_time = 2 ** attempt
-            if attempt < max_retries - 1:
-                print(
-                    f"[TrendScanner] Google Trends attempt {attempt + 1}/{max_retries} "
-                    f"failed: {e}. Retrying in {wait_time}s..."
-                )
-                import asyncio
-                await asyncio.sleep(wait_time)
-            else:
-                print(f"[TrendScanner] Google Trends failed after {max_retries} attempts: {e}")
+    try:
+        search = GoogleSearch({
+            "engine": "google_trends_trending_now",
+            "geo": "SA",
+            "hl": "ar",
+            "api_key": settings.serpapi_api_key,
+        })
+        results = search.get_dict()
+        print(f"[TrendScanner] SerpAPI response keys: {list(results.keys())}")
+        for item in results.get("trending_searches", [])[:max_results]:
+            title = item.get("query", "").strip() if isinstance(item, dict) else str(item).strip()
+            if title:
+                trends.append(Trend(
+                    title=title,
+                    description="Trending on Google in Saudi Arabia",
+                    source=TrendSource.SERP_TRENDS,
+                    origin=TopicOrigin.TREND,
+                    url=f"https://trends.google.com/trends/explore?q={title}&geo=SA",
+                    published_at=datetime.now(),
+                    source_name="SerpAPI Google Trends KSA",
+                    jack_potential=0.65,
+                    region="KSA",
+                    discovered_at=datetime.now(),
+                ))
+    except Exception as e:
+        print(f"[TrendScanner] SerpAPI trends failed: {e}")
 
     return trends
 
 
 async def scan_trends(
     mock: bool = False,
-    max_results: int = 8,
+    max_results: int = 15,
     source_names: list[str] | None = None,
 ) -> list[Trend]:
     """Run all trend scanners and return combined, deduplicated results.
@@ -310,50 +306,62 @@ async def scan_trends(
 
     all_trends: list[Trend] = []
 
-    # Run targeted source scanning if source names provided
-    if source_names:
+    # Fallback to default sources if none provided
+    if not source_names:
+        source_names = [settings.default_sources]
+
+    # Run targeted source scanning
+    try:
+        from .source_manager import get_domains_for_scan
+        domains = get_domains_for_scan(source_names)
+        if domains:
+            targeted = await scan_targeted_sources(domains, max_results=max_results)
+            all_trends.extend(targeted)
+            print(f"[TrendScanner] Got {len(targeted)} trends from targeted sources")
+    except Exception as e:
+        print(f"[TrendScanner] Targeted scanning failed: {e}")
+
+    # YouTube channel scanning (always runs when API key available)
+    if settings.youtube_scan_enabled:
         try:
-            from .source_manager import get_domains_for_scan
-            domains = get_domains_for_scan(source_names)
-            if domains:
-                targeted = await scan_targeted_sources(domains, max_results=max_results)
-                all_trends.extend(targeted)
-                print(f"[TrendScanner] Got {len(targeted)} trends from targeted sources")
-                
-            # Run YouTube scanning if enabled
-            if settings.youtube_scan_enabled:
-                from .yt_scanner import scan_youtube_sources, scan_trending_ksa
-                
-                # Channel-based scanning (from CSV handles)
-                yt_trends = await scan_youtube_sources(source_names, max_per_channel=settings.youtube_max_per_channel)
-                if yt_trends:
-                    all_trends.extend(yt_trends)
-                    print(f"[TrendScanner] Got {len(yt_trends)} trends from YouTube channels")
-                
-                # KSA trending discovery (YouTube Data API v3)
+            from .yt_scanner import scan_youtube_sources, scan_trending_ksa
+
+            yt_trends = await scan_youtube_sources(source_names, max_per_channel=settings.youtube_max_per_channel)
+            if yt_trends:
+                all_trends.extend(yt_trends)
+                print(f"[TrendScanner] Got {len(yt_trends)} trends from YouTube channels")
+
+            if settings.youtube_data_api_key or settings.google_api_key:
                 ksa_trends = await scan_trending_ksa(max_results=3)
                 if ksa_trends:
                     all_trends.extend(ksa_trends)
                     print(f"[TrendScanner] Got {len(ksa_trends)} trends from KSA YouTube trending")
-                    
         except Exception as e:
-            print(f"[TrendScanner] Targeted/YT scanning failed: {e}")
+            print(f"[TrendScanner] YouTube scanning failed: {e}")
 
-    # Run general scanners
+    # Run general Tavily scanner
     try:
         tavily_trends = await scan_tavily(max_results=max_results)
         all_trends.extend(tavily_trends)
     except Exception as e:
         print(f"[TrendScanner] Tavily scanner failed: {e}")
 
-    if settings.google_trends_enabled:
+    # Cap YouTube trending jack_potential to prevent domination
+    for t in all_trends:
+        if t.source == TrendSource.YOUTUBE:
+            t.jack_potential = min(t.jack_potential, 0.80)
+
+    # SerpAPI trends (replaces pytrends)
+    if settings.serpapi_api_key:
+        print("[TrendScanner] Running SerpAPI Google Trends KSA...")
         try:
-            google_trends = await scan_google_trends(max_results=4)
-            all_trends.extend(google_trends)
+            serp_trends = await scan_serpapi_trends(max_results=4)
+            all_trends.extend(serp_trends)
+            print(f"[TrendScanner] Got {len(serp_trends)} trends from SerpAPI")
         except Exception as e:
-            print(f"[TrendScanner] Google Trends scanner failed: {e}")
+            print(f"[TrendScanner] SerpAPI scanner failed: {e}")
     else:
-        print("[TrendScanner] Google Trends disabled (google_trends_enabled=False)")
+        print("[TrendScanner] SerpAPI skipped (no API key)")
 
     # Deduplicate using normalized titles
     seen: set[str] = set()

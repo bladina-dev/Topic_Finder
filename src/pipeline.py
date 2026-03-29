@@ -16,7 +16,37 @@ from .models import (
     Trend,
     TrendWithAngles,
 )
-from .trend_scanner import scan_trends
+from .trend_scanner import scan_trends, _normalize_title
+
+
+def deduplicate_and_score(trends: list[Trend]) -> list[Trend]:
+    """Deduplicate trends by normalized title and boost cross-layer topics.
+
+    For each group of duplicate titles:
+    - Keep the trend with the highest jack_potential.
+    - If 2+ distinct origins exist in the group, boost jack_potential by +0.1 (capped at 1.0).
+
+    Returns trends sorted by jack_potential descending.
+    """
+    from .models import TopicOrigin
+
+    groups: dict[str, list[Trend]] = {}
+    for trend in trends:
+        key = _normalize_title(trend.title)
+        if not key:
+            key = trend.title.lower().strip()
+        groups.setdefault(key, []).append(trend)
+
+    deduped: list[Trend] = []
+    for group in groups.values():
+        best = max(group, key=lambda t: t.jack_potential)
+        distinct_origins = {t.origin for t in group}
+        if len(distinct_origins) >= 2:
+            best.jack_potential = min(best.jack_potential + 0.1, 1.0)
+        deduped.append(best)
+
+    deduped.sort(key=lambda t: t.jack_potential, reverse=True)
+    return deduped
 
 
 async def run_pipeline(
@@ -25,6 +55,7 @@ async def run_pipeline(
     angles_per_trend: int = 3,
     provider: AIProvider | None = None,
     platforms: list[Platform] | None = None,
+    source_names: list[str] | None = None,
 ) -> AgentOutput:
     """Run the full marketing agent pipeline.
 
@@ -48,8 +79,8 @@ async def run_pipeline(
     # Step 1: Scan trends
     print(f"[Pipeline] Scanning trends (mock={mock})...")
     try:
-        trends = await scan_trends(mock=mock, max_results=max_trends)
-        print(f"[Pipeline] Found {len(trends)} trends")
+        trends = await scan_trends(mock=mock, max_results=max_trends, source_names=source_names)
+        print(f"[Pipeline] Found {len(trends)} trends from trend scanner")
     except Exception as e:
         errors.append(f"Trend scanning failed: {e}")
         return AgentOutput(errors=errors)
@@ -57,6 +88,46 @@ async def run_pipeline(
     if not trends:
         errors.append("No trends found")
         return AgentOutput(errors=errors)
+
+    # Step 1b: Influencer signal layer
+    if not mock and settings.influencer_scan_enabled:
+        try:
+            from .influencer_scanner import scan_influencer_domains, scan_influencer_youtube
+            effective_sources = source_names or [settings.default_sources]
+            inf_domain_trends = await scan_influencer_domains(effective_sources)
+            inf_yt_trends = await scan_influencer_youtube(effective_sources)
+            trends.extend(inf_domain_trends)
+            trends.extend(inf_yt_trends)
+            print(f"[Pipeline] +{len(inf_domain_trends)} influencer domain, +{len(inf_yt_trends)} influencer YT trends")
+        except Exception as e:
+            print(f"[Pipeline] Influencer scan failed (non-fatal): {e}")
+
+    # Step 1c: Seed keyword layer
+    if not mock:
+        try:
+            from .seed_scanner import scan_seed_keywords
+            seed_trends = await scan_seed_keywords()
+            trends.extend(seed_trends)
+            print(f"[Pipeline] +{len(seed_trends)} seed keyword trends")
+        except Exception as e:
+            print(f"[Pipeline] Seed scan failed (non-fatal): {e}")
+
+    # Step 1d: Deduplicate and score cross-layer topics
+    trends = deduplicate_and_score(trends)
+    trends = trends[:max_trends]
+    print(f"[Pipeline] After dedup+score: {len(trends)} trends")
+
+    # Short-circuit: scan-only mode (no angle generation)
+    if angles_per_trend == 0:
+        results = [TrendWithAngles(trend=t, angles=[]) for t in trends]
+        return AgentOutput(
+            timestamp=datetime.now(),
+            provider_used=provider or AIProvider(settings.default_ai_provider),
+            trend_count=len(trends),
+            angle_count=0,
+            results=results,
+            errors=errors,
+        )
 
     # Step 2: Load Obsidian feedback to guide angle generation
     feedback_context = ""

@@ -27,14 +27,23 @@ console = Console()
 @app.command()
 def scan(
     mock: bool = typer.Option(False, "--mock", "-m", help="Use mock trend data"),
-    max_results: int = typer.Option(8, "--max", "-n", help="Max trends to return"),
+    max_results: int = typer.Option(15, "--max", "-n", help="Max trends to return"),
+    sources: str = typer.Option("", "--sources", "-s", help="Comma-separated source names to scan"),
 ):
-    """Scan current trending topics from KSA/Gulf sources."""
-    from .trend_scanner import scan_trends
+    """Scan current trending topics from KSA/Gulf sources (all 3 layers)."""
+    from .pipeline import run_pipeline
 
     console.print("\n[bold cyan]🔍 Scanning Trends...[/bold cyan]\n")
 
-    trends = asyncio.run(scan_trends(mock=mock, max_results=max_results))
+    source_names = [sources] if sources else None
+    output = asyncio.run(run_pipeline(
+        mock=mock,
+        max_trends=max_results,
+        angles_per_trend=0,
+        source_names=source_names,
+    ))
+
+    trends = [r.trend for r in output.results]
 
     if not trends:
         console.print("[yellow]No trends found.[/yellow]")
@@ -60,6 +69,7 @@ def generate(
     max_trends: int = typer.Option(8, "--max-trends", "-t", help="Max trends"),
     angles: int = typer.Option(3, "--angles", "-a", help="Angles per trend"),
     provider: str = typer.Option("", "--provider", "-p", help="AI provider: gemini, claude, lmstudio"),
+    sources: str = typer.Option("", "--sources", "-s", help="Comma-separated source names to scan"),
 ):
     """Run the full pipeline — scan trends → generate content angles."""
     from .models import AIProvider
@@ -80,6 +90,7 @@ def generate(
         max_trends=max_trends,
         angles_per_trend=angles,
         provider=ai_provider,
+        source_names=[sources] if sources else None,
     ))
 
     if output.errors:
@@ -143,6 +154,7 @@ def video(
     pick: int = typer.Option(0, "--pick", "-k", help="Which angle to convert (0=best by brand_alignment_score)"),
     output_dir: Path = typer.Option(Path("output/videos"), "--output", "-o", help="Output directory"),
     provider: str = typer.Option("", "--provider", "-p", help="AI provider: gemini, claude, lmstudio"),
+    sources: str = typer.Option("", "--sources", "-s", help="Comma-separated source names to scan"),
     voiceover: bool = typer.Option(False, "--voiceover", help="Generate ElevenLabs Arabic voiceover MP3"),
     mock_voiceover: bool = typer.Option(False, "--mock-voiceover", help="Generate placeholder voiceover TXT (no API key needed)"),
     voice_id: str = typer.Option("pNInz6obpgDQGcFmaJgB", "--voice-id", help="ElevenLabs voice ID"),
@@ -172,6 +184,7 @@ def video(
         max_trends=max_trends,
         angles_per_trend=angles,
         provider=ai_provider,
+        source_names=[sources] if sources else None,
     ))
 
     if output.errors:

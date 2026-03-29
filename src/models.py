@@ -29,6 +29,16 @@ class TrendSource(str, Enum):
     CULTURAL = "cultural"
     TARGETED = "targeted"
     YOUTUBE = "youtube"
+    SERP_TRENDS = "serp_trends"
+    INFLUENCER = "influencer"
+    SEED_KEYWORD = "seed_keyword"
+
+
+class TopicOrigin(str, Enum):
+    """Origin layer of a discovered topic."""
+    TREND = "trend"
+    INFLUENCER = "influencer"
+    SEED_KEYWORD = "seed_keyword"
 
 
 class AIProvider(str, Enum):
@@ -76,6 +86,7 @@ class Trend(BaseModel):
     title: str
     description: str = ""
     source: TrendSource
+    origin: TopicOrigin = TopicOrigin.TREND
     jack_potential: float = Field(default=0.0, ge=0.0, le=1.0)
     url: str = ""
     published_at: Optional[datetime] = None  # When the original content was published
@@ -127,9 +138,10 @@ class AgentOutput(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response."""
     status: str = "healthy"
-    version: str = "0.1.0"
+    version: str = "0.5.1"
     provider: str = ""
     timestamp: datetime = Field(default_factory=datetime.now)
+    apis: dict = Field(default_factory=dict)
 
 
 class GenerateRequest(BaseModel):
@@ -139,6 +151,7 @@ class GenerateRequest(BaseModel):
     max_trends: int = 8
     angles_per_trend: int = 3
     platforms: list[Platform] = Field(default_factory=lambda: [Platform.GENERAL])
+    sources: str = ""
 
 
 class BrandUploadResponse(BaseModel):

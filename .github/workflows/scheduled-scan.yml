@@ -1,0 +1,100 @@
+# Marketing Agent — Scheduled 3-Layer Topic Discovery
+# Runs the full pipeline: Trends (Tavily/SerpAPI/YouTube) + Influencer signals + Seed keywords
+# Schedule: Every 6 hours (06:00, 12:00, 18:00, 00:00 UTC)
+# Manual trigger also available via workflow_dispatch
+
+name: "🔍 Scheduled Topic Scan"
+
+on:
+  schedule:
+    # Every 6 hours
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      max_trends:
+        description: "Max trends to return"
+        default: "15"
+        type: string
+      generate_angles:
+        description: "Also generate content angles?"
+        default: false
+        type: boolean
+      angles_per_trend:
+        description: "Angles per trend (if generating)"
+        default: "3"
+        type: string
+      mock:
+        description: "Use mock data (for testing)"
+        default: false
+        type: boolean
+
+env:
+  UV_SYSTEM_PYTHON: 1
+
+jobs:
+  scan:
+    name: "Run 3-Layer Discovery Pipeline"
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run 3-Layer Topic Scan
+        if: ${{ !inputs.generate_angles }}
+        env:
+          # Search & Discovery APIs
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY }}
+          # AI Providers (needed only for angle generation)
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Delivery channels
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          # Config
+          INFLUENCER_SCAN_ENABLED: "true"
+          DEFAULT_SOURCES: "saudi_general"
+        run: |
+          echo "🔍 Running 3-layer scan (Trends + Influencers + Seeds)..."
+          uv run python -m src.cli scan \
+            --max ${{ inputs.max_trends || '15' }} \
+            --sources saudi_general \
+            ${{ inputs.mock == 'true' && '--mock' || '' }}
+
+      - name: Run Full Pipeline (with Angles)
+        if: ${{ inputs.generate_angles }}
+        env:
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          SERPAPI_API_KEY: ${{ secrets.SERPAPI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          YOUTUBE_DATA_API_KEY: ${{ secrets.YOUTUBE_DATA_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          INFLUENCER_SCAN_ENABLED: "true"
+          DEFAULT_SOURCES: "saudi_general"
+        run: |
+          echo "🚀 Running full pipeline (Scan + Angles)..."
+          uv run python -m src.cli generate \
+            --max-trends ${{ inputs.max_trends || '15' }} \
+            --angles ${{ inputs.angles_per_trend || '3' }} \
+            --sources saudi_general \
+            ${{ inputs.mock == 'true' && '--mock' || '' }}

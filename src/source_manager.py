@@ -234,3 +234,45 @@ def add_source(
         })
 
     print(f"[SourceManager] Added '{handle_or_domain}' to '{file_name}.csv'")
+
+
+def load_seed_keywords(name: str = "seed_keywords") -> list[dict]:
+    """Load seed keywords from a CSV file.
+
+    Args:
+        name: CSV file name without extension (default: "seed_keywords").
+
+    Returns:
+        List of dicts with keys: vertical, keyword, intent, label.
+
+    Raises:
+        FileNotFoundError: If the CSV file does not exist.
+        ValueError: If required columns are missing.
+    """
+    csv_path = SOURCES_DIR / f"{name}.csv"
+    if not csv_path.exists():
+        raise FileNotFoundError(
+            f"Seed keywords file '{name}.csv' not found in {SOURCES_DIR}."
+        )
+
+    required_cols = {"vertical", "keyword", "intent", "label"}
+    keywords: list[dict] = []
+
+    with csv_path.open(newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames is None:
+            raise ValueError(f"CSV file '{name}.csv' is empty.")
+        missing = required_cols - set(reader.fieldnames)
+        if missing:
+            raise ValueError(
+                f"CSV '{name}.csv' missing required columns: {missing}."
+            )
+        for row in reader:
+            keywords.append({
+                "vertical": row["vertical"].strip(),
+                "keyword": row["keyword"].strip(),
+                "intent": row["intent"].strip(),
+                "label": row["label"].strip(),
+            })
+
+    return keywords
