@@ -17,7 +17,7 @@ on:
         type: string
       generate_angles:
         description: "Also generate content angles?"
-        default: false
+        default: true
         type: boolean
       angles_per_trend:
         description: "Angles per trend (if generating)"
