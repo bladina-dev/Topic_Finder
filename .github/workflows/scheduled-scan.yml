@@ -91,10 +91,9 @@ jobs:
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
           INFLUENCER_SCAN_ENABLED: "true"
           DEFAULT_SOURCES: "saudi_general"
+          MAX_TRENDS: ${{ inputs.max_trends || '15' }}
+          ANGLES_PER_TREND: ${{ inputs.angles_per_trend || '3' }}
+          MOCK_RUN: ${{ inputs.mock || 'false' }}
         run: |
-          echo "🚀 Running full pipeline (Scan + Angles)..."
-          uv run python -m src.cli generate \
-            --max-trends ${{ inputs.max_trends || '15' }} \
-            --angles ${{ inputs.angles_per_trend || '3' }} \
-            --sources saudi_general \
-            ${{ inputs.mock == 'true' && '--mock' || '' }}
+          echo "🚀 Running full pipeline with Reporting (Scan + Angles + Telegram)..."
+          uv run python scripts/run_and_report.py

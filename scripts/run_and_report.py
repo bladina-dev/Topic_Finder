@@ -32,8 +32,13 @@ async def main():
 
     try:
         # Step 1: Run the pipeline
-        print("\n[1/4] Running pipeline...")
-        output = await run_pipeline(mock=False)
+        import os
+        max_trends = int(os.environ.get("MAX_TRENDS", "15"))
+        angles_per_trend = int(os.environ.get("ANGLES_PER_TREND", "3"))
+        mock = os.environ.get("MOCK_RUN", "false").lower() == "true"
+        
+        print(f"\n[1/4] Running pipeline (max_trends={max_trends}, angles={angles_per_trend}, mock={mock})...")
+        output = await run_pipeline(mock=mock, max_trends=max_trends, angles_per_trend=angles_per_trend)
         print(f"  → {output.trend_count} trends, {output.angle_count} angles")
 
         # Step 2: Benchmark (if we have angles)
